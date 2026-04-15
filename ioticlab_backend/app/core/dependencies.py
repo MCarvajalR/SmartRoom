@@ -71,7 +71,7 @@ def get_visible_levels(user: User | None) -> list[str]:
     if user is None:
         return ["public"]
     if user.role == "admin":
-        return ["public", "docente", "admin"]
+        return ["public", "docente", "admin", "private"]
     if user.role == "docente":
         return ["public", "docente"]
     return ["public"]

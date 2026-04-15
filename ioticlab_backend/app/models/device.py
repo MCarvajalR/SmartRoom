@@ -10,7 +10,6 @@ class Device(Base):
     """
     Dispositivo registrado en Home Assistant.
     Agregar un nuevo dispositivo = POST /api/v1/devices
-    No hay que tocar código.
     """
     __tablename__ = "devices"
 
