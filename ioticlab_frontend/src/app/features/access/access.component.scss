@@ -1,0 +1,72 @@
+.access-page {
+  max-width: 800px;
+  h2 { font-size: var(--text-xl); font-weight: 700; margin-bottom: var(--space-8); }
+  h3 { font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-5); }
+}
+
+.door-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-10);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-8);
+  box-shadow: var(--shadow-md);
+}
+
+.door-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--color-error);
+
+  &.unlocked { color: var(--color-success); }
+}
+
+.door-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.btn-unlock, .btn-lock {
+  padding: var(--space-3) var(--space-8);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.btn-unlock { background: var(--color-success); color: #fff; &:hover:not(:disabled) { filter: brightness(0.9); } }
+.btn-lock   { background: var(--color-error);   color: #fff; &:hover:not(:disabled) { filter: brightness(0.9); } }
+
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th, td {
+    padding: var(--space-3) var(--space-4);
+    text-align: left;
+    font-size: var(--text-sm);
+    border-bottom: 1px solid var(--color-divider);
+  }
+
+  th { color: var(--color-text-muted); font-weight: 600; }
+}
+
+.action-badge {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+
+  &.action-unlock { background: var(--color-success-highlight); color: var(--color-success); }
+  &.action-lock   { background: var(--color-error-highlight);   color: var(--color-error); }
+}
