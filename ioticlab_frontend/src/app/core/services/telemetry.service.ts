@@ -6,6 +6,7 @@ const API = 'http://localhost:8000/api/v1';
 
 @Injectable({ providedIn: 'root' })
 export class TelemetryService {
+  public devicesCache: TelemetryLatest[] = [];
   constructor(private http: HttpClient) {}
 
   // Sin token: retorna solo dispositivos 'public'

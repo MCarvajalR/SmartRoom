@@ -25,7 +25,7 @@ async def get_state(entity_id: str) -> dict | None:
     """
     url = f"{settings.HA_URL}/api/states/{entity_id}"
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=3.0) as client: 
             response = await client.get(url, headers=_headers())
             if response.status_code == 200:
                 return response.json()
@@ -46,7 +46,7 @@ async def call_service(domain: str, service: str, entity_id: str, extra: dict | 
     if extra:
         payload.update(extra)
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=3.0) as client:
             response = await client.post(url, headers=_headers(), json=payload)
             if response.status_code in (200, 201):
                 return True

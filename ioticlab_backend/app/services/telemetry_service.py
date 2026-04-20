@@ -3,6 +3,7 @@ Colector de telemetría: consulta HA por cada dispositivo activo
 y guarda el resultado en la base de datos.
 """
 import logging
+import asyncio # <--- Asegúrate de importar esto
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,10 +39,18 @@ async def collect_all(db: AsyncSession | None = None) -> int:
         result = await db.execute(select(Device).where(Device.is_active == True))
         devices = result.scalars().all()
 
-        for device in devices:
-            state_data = await ha_client.get_state(device.entity_id)
+        # RIGOR TÉCNICO: Ejecución en paralelo
+        # Creamos una lista de tareas (tasks)
+        tasks = [ha_client.get_state(device.entity_id) for device in devices]
+
+        # asyncio.gather lanza todas las peticiones a la vez
+        states_data = await asyncio.gather(*tasks)
+
+        saved = 0
+        # state_data_list = await asyncio.gather(*tasks, return_exceptions=True)
+        for device, state_data in zip(devices, states_data):
             if state_data is None:
-                logger.warning("No se pudo obtener estado de %s", device.entity_id)
+                #logger.warning("No se pudo obtener estado de %s", device.entity_id)
                 continue
 
             raw_state: str = state_data.get("state", "unknown")
