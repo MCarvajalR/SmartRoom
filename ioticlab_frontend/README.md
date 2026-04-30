@@ -192,7 +192,7 @@ Los tokens CSS en `styles.scss` controlan ambos temas.
   - `POST /api/v1/devices`
   - `PATCH /api/v1/devices/:id`
   - `DELETE /api/v1/devices/:id`
-  - `GET  /api/v1/access/door/status`
+  - `GET  /api/v1/access/door`
   - `POST /api/v1/access/door/unlock`
   - `POST /api/v1/access/door/lock`
   - `GET  /api/v1/access/logs`

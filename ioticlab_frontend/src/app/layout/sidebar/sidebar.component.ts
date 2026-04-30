@@ -7,32 +7,61 @@ import { AuthService } from '../../core/services/auth.service';
   standalone: true,
   imports: [RouterLink, RouterLinkActive],
   template: `
-    <nav class="sidebar">
-      <a class="nav-item" routerLink="/dashboard" routerLinkActive="active">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-        Dashboard
-      </a>
+    <aside class="sidebar">
+      <!-- 1. LOGO: Identidad visual idéntica -->
+      <div class="sidebar-logo">
+        <h2><i class="fa-brands fa-battle-net"></i> DAMBA</h2>
+      </div>
+      
+      <nav class="sidebar-nav">
+        <ul>
+          <!-- 2. DASHBOARD: Acceso universal -->
+          <li>
+            <a routerLink="/dashboard" routerLinkActive="active">
+              <i class="fa-regular fa-rectangle-list"></i> Dashboard
+            </a>
+          </li>
+          
+          <!-- 3. ACCESO: Ahora protegido (Admin y Docente) -->
+          @if (auth.hasRole('admin', 'docente')) {
+            <li>
+              <a routerLink="/access" routerLinkActive="active">
+                <i class="fa-brands fa-keycdn"></i> Acceso
+              </a>
+            </li>
+          }
 
-      @if (auth.hasRole('admin', 'docente')) {
-        <a class="nav-item" routerLink="/access" routerLinkActive="active">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Acceso
-        </a>
-      }
+          <!-- 4. GESTIÓN ADMIN: Solo visible si tiene permisos de gestión -->
+          @if (auth.hasRole('admin', 'docente')) {
+            <div class="menu-separator">Gestión Laboratorio</div>
+            
+            <li>
+              <a routerLink="/admin/devices" routerLinkActive="active">
+                <i class="fa-brands fa-connectdevelop"></i> Dispositivos
+              </a>
+            </li>
+            
+            @if (auth.hasRole('admin')) {
+              <li>
+                <a routerLink="/admin/users" routerLinkActive="active">
+                  <i class="fa-solid fa-chalkboard-user"></i> Usuarios
+                </a>
+              </li>
+            }
+          }
+        </ul>
+      </nav>
 
-      @if (auth.hasRole('admin')) {
-        <div class="nav-section">Admin</div>
-        <a class="nav-item" routerLink="/admin/devices" routerLinkActive="active">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-          Dispositivos
-        </a>
-        <a class="nav-item" routerLink="/admin/users" routerLinkActive="active">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Usuarios
-        </a>
-      }
-    </nav>
+      <!-- 5. FOOTER: Botón de salida con la misma clase -->
+      <div class="sidebar-footer">
+        <button (click)="auth.logout()" class="btn-logout">
+          <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+        </button>
+      </div>
+    </aside>
   `,
+  // No olvides que los estilos deben estar en sidebar.component.scss 
+  // o ser globales en styles.scss para que funcionen las clases.
   styleUrl: './sidebar.component.scss'
 })
 export class SidebarComponent {

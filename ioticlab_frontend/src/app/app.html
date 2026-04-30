@@ -1,51 +1,15 @@
 <div class="main-wrapper">
+  <!-- Solo renderizamos el Sidebar si el usuario está logueado -->
   @if (auth.isLoggedIn()) {
-    <aside class="sidebar">
-      <div class="sidebar-logo">
-        <h2><i class="fa-brands fa-battle-net"></i> DAMBA</h2>
-      </div>
-      
-      <nav class="sidebar-nav">
-        <ul>
-  <li>
-    <a routerLink="/dashboard" routerLinkActive="active">
-      <i class="fa-regular fa-rectangle-list"></i> Dashboard
-    </a>
-  </li>
-  
-  <li>
-    <a routerLink="/access" routerLinkActive="active">
-      <i class="fa-brands fa-keycdn"></i> Acceso
-    </a>
-  </li>
-
-  @if (auth.role() === 'admin') {
-    <div class="menu-separator">Gestión Admin</div>
-    
-    <li>
-      <a routerLink="/admin/devices" routerLinkActive="active">
-        <i class="fa-brands fa-connectdevelop"></i> Dispositivos
-      </a>
-    </li>
-    
-    <li>
-      <a routerLink="/admin/users" routerLinkActive="active">
-        <i class="fa-solid fa-chalkboard-user"></i> Usuarios
-      </a>
-    </li>
-  }
-</ul>
-      </nav>
-
-      <div class="sidebar-footer">
-        <button (click)="auth.logout()" class="btn-logout">
-          <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-        </button>
-      </div>
-    </aside>
+    <app-sidebar></app-sidebar>
   }
 
   <main class="app-content">
+    <!-- El Topbar debería ir aquí si lo tienes creado -->
+    @if (auth.isLoggedIn()) {
+      <app-topbar></app-topbar>
+    }
+    
     <router-outlet />
   </main>
 </div>

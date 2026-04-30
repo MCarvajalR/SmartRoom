@@ -1,28 +1,53 @@
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  height: 56px;
+  justify-content: space-between; // Mantiene los bloques a los extremos
+  height: 64px;
   padding: 0 var(--space-6);
-  background: var(--color-surface);
+  background: var(--color-background); // Mimetismo con el fondo del contenido
   border-bottom: 1px solid var(--color-border);
   z-index: 100;
 
-  &-brand {
+  .topbar-left {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    text-decoration: none;
-    font-weight: 700;
-    font-size: var(--text-lg);
-    color: var(--color-text);
-    letter-spacing: -0.02em;
   }
 
-  &-right {
+  .topbar-right {
     display: flex;
     align-items: center;
     gap: var(--space-4);
+  }
+}
+
+.btn-ha {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--color-surface-offset);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  i {
+    color: var(--color-primary); // Resalta el icono con el color de identidad del lab
+    font-size: 1.1rem;
+  }
+
+  &:hover {
+    background: var(--color-primary-highlight);
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 }
 
@@ -53,6 +78,8 @@
 }
 
 .btn-logout {
+  background: var(--color-surface); // Un poco de contraste para el botón secundario
+  border: 1px solid var(--color-border);
   background: transparent;
   border: 1px solid var(--color-border);
   color: var(--color-text-muted);
@@ -71,7 +98,7 @@
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 8px; 
+  gap: 8px;
 }
 
 .nav-item img {

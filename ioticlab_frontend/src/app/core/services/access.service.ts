@@ -16,7 +16,7 @@ export class AccessService {
   }
 
   getStatus() {
-    return this.http.get<{ state: string; entity_id: string }>(`${API}/access/door/status`);
+    return this.http.get<{ state: string; entity_id: string }>(`${API}/access/door`);
   }
 
   getLogs(limit = 50) {

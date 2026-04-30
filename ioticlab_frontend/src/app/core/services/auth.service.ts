@@ -23,10 +23,14 @@ export class AuthService {
     return !!this._token();
   }
 
-  hasRole(...roles: UserRole[]): boolean {
-    const r = this._role();
-    return r !== null && roles.includes(r);
-  }
+  hasRole(...roles: string[]): boolean {
+  const r = this._role();
+  if (!r) return false;
+
+  // Normalizamos a minúsculas para una comparación analítica infalible
+  const currentRole = String(r).toLowerCase().trim();
+  return roles.some(role => role.toLowerCase().trim() === currentRole);
+}
 
   login(creds: LoginRequest) {
     return this.http.post<TokenResponse>(`${API}/auth/login`, creds).pipe(
