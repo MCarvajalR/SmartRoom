@@ -8,11 +8,11 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
   const auth  = inject(AuthService);
   const token = auth.token();
 
-  if (token) {
-    const cloned = req.clone({
+  if (token && req.url.includes('localhost:8000')) {
+    const authReq = req.clone({
       setHeaders: { Authorization: `Bearer ${token}` }
     });
-    return next(cloned);
+    return next(authReq);
   }
 
   // Sin token: deja pasar la petición sin modificar (para endpoints públicos)

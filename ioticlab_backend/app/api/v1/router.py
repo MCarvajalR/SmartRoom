@@ -12,6 +12,6 @@ api_router.include_router(access.router)
 api_router.include_router(ws.router)                             # WebSocket /ws/telemetry
 api_router.include_router(                                       # Auto-discovery
     discover.router,
-    prefix="/api/v1/devices",
+    prefix="/devices",
     tags=["Devices"]
 )

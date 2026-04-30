@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { TelemetryLatest, TelemetryRecord } from '../models/telemetry.model';
 
@@ -6,7 +6,10 @@ const API = 'http://localhost:8000/api/v1';
 
 @Injectable({ providedIn: 'root' })
 export class TelemetryService {
-  public devicesCache: TelemetryLatest[] = [];
+  // Signal para que Angular detecte cambios automáticamente
+  readonly devicesCache = signal<TelemetryLatest[]>([]);
+  //public devicesCache: TelemetryLatest[] = [];
+  
   constructor(private http: HttpClient) {}
 
   // Sin token: retorna solo dispositivos 'public'

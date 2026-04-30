@@ -9,13 +9,21 @@
         </div>
 
         <div class="header-actions">
+        <!-- 
+            El botón se oculta cuando el WS está conectado.
+            Justificación: en modo TV no hay usuario. Si el WS funciona,
+            el botón es ruido visual innecesario. Solo aparece como fallback
+            cuando hay desconexión.
+        -->
+        @if (realtime.status() !== 'connected') {
             <button class="btn-refresh" (click)="manualRefresh()" [disabled]="isRefreshing">
-                <i class="fas fa-sync-alt" [class.fa-spin]="isRefreshing"></i>
-                <span>{{ isRefreshing ? 'Actualizando...' : 'Refrescar' }}</span>
+            <i class="fas fa-sync-alt" [class.fa-spin]="isRefreshing"></i>
+            <span>{{ isRefreshing ? 'Actualizando...' : 'Refrescar' }}</span>
             </button>
-            <span class="last-update">
-                @if (lastUpdate) { {{ lastUpdate | date:'HH:mm:ss' }} }
-            </span>
+        }
+        <span class="last-update">
+            @if (lastUpdate) { Última actualización: {{ lastUpdate | date:'HH:mm:ss' }} }
+        </span>
         </div>
     </div>
 
@@ -24,6 +32,15 @@
             @for (i of [1,2,3]; track i) {
                 <div class="metric-card skeleton"></div>
             }
+        }
+
+        <!-- Error visible: si falló tras todos los reintentos -->
+        @if (loadError && !isInitialLoading && devices.length === 0) {
+        <div class="load-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>No se pudo conectar al servidor.</p>
+            <button class="btn-refresh" (click)="loadInitial()">Reintentar</button>
+        </div>
         }
 
         @for (d of devices; track d.device_id) {

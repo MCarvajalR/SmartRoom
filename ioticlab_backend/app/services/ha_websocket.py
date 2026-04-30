@@ -75,6 +75,104 @@ async def process_state_change(event_data: dict) -> None:
     
 
 async def process_state_change(event_data: dict) -> None:
+    EXCLUDED_PREFIXES = (
+        "person.", "zone.", "sun.", "weather.", "tts.",
+        "todo.", "conversation.", "event.", "sensor.backup_",
+        "sensor.sun_", "update.", "sensor.sensors",
+    )
+
+    entity_id = event_data.get("entity_id", "")
+    if not entity_id or any(entity_id.startswith(p) for p in EXCLUDED_PREFIXES):
+        return
+
+    new_state = event_data.get("new_state")
+    if not new_state or new_state.get("state") in ("unavailable", "unknown", ""):
+        return
+
+    raw_state = new_state["state"]
+    try:
+        value = float(raw_state)
+    except (ValueError, TypeError):
+        value = None
+
+    # Variables para usar fuera de la sesión
+    broadcast_payload = None
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Device).where(Device.entity_id == entity_id)
+        )
+        device = result.scalar_one_or_none()
+
+        if device and not device.is_active:
+            logger.debug(f"[ignorado] {entity_id} inactivo")
+            return
+
+        if not device:
+            attrs = new_state.get("attributes", {})
+            device_class = attrs.get("device_class", "")
+            type_map = {
+                "temperature": "temperature", "humidity": "humidity",
+                "power": "plug", "energy": "plug", "lock": "lock",
+                "illuminance": "light", "motion": "binary_sensor",
+            }
+            device = Device(
+                entity_id   = entity_id,
+                name        = attrs.get("friendly_name", entity_id),
+                device_type = type_map.get(device_class, entity_id.split(".")[0]),
+                unit        = attrs.get("unit_of_measurement"),
+                visibility  = "public",
+                is_active   = False,
+            )
+            try:
+                db.add(device)
+                await db.commit()
+                logger.info(f"Auto-registrado (inactivo): {entity_id}")
+            except IntegrityError:
+                await db.rollback()
+            return  # No telemetría hasta que admin lo active
+
+        record = TelemetryRecord(
+            device_id   = device.id,
+            value       = value,
+            raw_state   = raw_state,
+            recorded_at = datetime.now(timezone.utc),
+        )
+        db.add(record)
+        await db.commit()
+
+        # Guardamos los valores DENTRO de la sesión antes de que se cierre
+        broadcast_payload = {
+            "type":        "state_update",
+            "device_id":   device.id,
+            "entity_id":   entity_id,
+            "device_name": device.name,
+            "device_type": device.device_type,
+            "unit":        device.unit,
+            "value":       value,
+            "raw_state":   raw_state,
+            "recorded_at": datetime.now(timezone.utc).isoformat(),
+            "visibility":  device.visibility,
+        }
+
+    # Ahora sí: fuera de la sesión, con datos ya en memoria
+    if broadcast_payload:
+        await broadcast_to_frontend(broadcast_payload)
+        logger.info(f"[RT] {entity_id} → {raw_state}")  # INFO para que sea visible
+
+    # Access log para puerta
+    DOOR_ENTITY_ID = "input_boolean.puerta_laboratorio_simulada"
+    if entity_id == DOOR_ENTITY_ID:
+        from app.models.access_log import AccessLog
+        action = "unlock" if raw_state in ("on", "open", "unlocked") else "lock"
+        async with AsyncSessionLocal() as log_db:
+            log_db.add(AccessLog(
+                entity_id    = entity_id,
+                action       = action,
+                triggered_by = "homeassistant",
+            ))
+            await log_db.commit()
+        logger.info(f"[ACCESS LOG] Puerta → {action}")
     """
     Recibe el payload de un evento state_changed de HA.
     Si la entidad está registrada en DAMBA: guarda en DB y hace broadcast.
