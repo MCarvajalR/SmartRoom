@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { SlicePipe } from '@angular/common';
 import { AuthService } from '../../../core/services/auth.service';
@@ -81,35 +81,47 @@ import { User, UserCreate, UserRole } from '../../../core/models/user.model';
   styleUrl: './admin-users.component.scss'
 })
 export class AdminUsersComponent implements OnInit {
-  users: User[]   = [];
-  showForm        = false;
-  creating        = false;
-  createError     = '';
+  users: User[] = [];
+  showForm = false;
+  creating = false;
+  createError = '';
 
   form = this.fb.group({
     username: ['', [Validators.required, Validators.minLength(3)]],
-    email:    ['', [Validators.required, Validators.email]],
+    email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
-    role:     ['anonimo' as UserRole, Validators.required],
+    role: ['anonimo' as UserRole, Validators.required],
   });
 
-  constructor(private auth: AuthService, private fb: FormBuilder) {}
+  constructor(
+    private auth: AuthService,
+    private fb: FormBuilder,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit() { this.load(); }
 
   load() {
-    this.auth.getUsers().subscribe(data => this.users = data);
+    this.auth.getUsers().subscribe({
+      next: (data) => {
+        this.users = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error cargando usuarios:', err);
+      }
+    });
   }
 
   create() {
     if (this.form.invalid) return;
-    this.creating    = true;
+    this.creating = true;
     this.createError = '';
     const payload: UserCreate = {
       username: this.form.value.username!,
-      email:    this.form.value.email!,
+      email: this.form.value.email!,
       password: this.form.value.password!,
-      role:     this.form.value.role! as UserRole,
+      role: this.form.value.role! as UserRole,
     };
     this.auth.createUser(payload).subscribe({
       next: () => {
@@ -117,10 +129,13 @@ export class AdminUsersComponent implements OnInit {
         this.form.reset({ role: 'anonimo' });
         this.showForm = false;
         this.creating = false;
+        this.cdr.detectChanges();
       },
       error: () => {
         this.createError = 'Error al crear el usuario. Verifica que el nombre de usuario no exista.';
         this.creating = false;
+        this.cdr.detectChanges();
+
       }
     });
   }

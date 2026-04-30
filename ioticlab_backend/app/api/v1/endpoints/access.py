@@ -33,10 +33,14 @@ async def get_door_state(
     await db.commit()
 
     attrs = state_data.get("attributes", {})
+    ha_state = state_data.get("state", "unknown")
+
+    door_state = "unlocked" if ha_state == "on" else "locked"
+
     return DoorStateResponse(
-        entity_id=DOOR_ENTITY_ID,
-        state=state_data.get("state", "unknown"),
-        friendly_name=attrs.get("friendly_name"),
+    entity_id=DOOR_ENTITY_ID,
+    state=door_state,
+    friendly_name=attrs.get("friendly_name"),
     )
 
 

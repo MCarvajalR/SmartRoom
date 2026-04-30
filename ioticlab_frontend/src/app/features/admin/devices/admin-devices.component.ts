@@ -1,15 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DeviceService } from '../../../core/services/device.service';
 import { Device, DeviceCreate, DeviceType, Visibility } from '../../../core/models/device.model';
 
 interface DiscoveredEntity {
-  entity_id:          string;
-  friendly_name:      string;
-  state:              string;
-  unit:               string | null;
-  device_class:       string | null;
+  entity_id: string;
+  friendly_name: string;
+  state: string;
+  unit: string | null;
+  device_class: string | null;
   already_registered: boolean;
 }
 
@@ -18,10 +18,10 @@ const API = 'http://localhost:8000/api/v1';
 // Mapeo automático device_class de HA → device_type de DAMBA
 const DC_MAP: Record<string, DeviceType> = {
   temperature: 'temperature',
-  humidity:    'humidity',
-  power:       'plug',
-  energy:      'plug',
-  lock:        'lock',
+  humidity: 'humidity',
+  power: 'plug',
+  energy: 'plug',
+  lock: 'lock',
   illuminance: 'light',
 };
 
@@ -176,51 +176,68 @@ const DC_MAP: Record<string, DeviceType> = {
   styleUrl: './admin-devices.component.scss'
 })
 export class AdminDevicesComponent implements OnInit {
-  devices: Device[]  = [];
-  showForm           = false;
-  showDiscover       = false;
-  creating           = false;
-  importing          = false;
-  loadingDiscover    = false;
-  createError        = '';
-  discoverError      = '';
+  devices: Device[] = [];
+  showForm = false;
+  showDiscover = false;
+  creating = false;
+  importing = false;
+  loadingDiscover = false;
+  createError = '';
+  discoverError = '';
   discovered: DiscoveredEntity[] = [];
-  selectedEntities   = new Set<string>();
+  selectedEntities = new Set<string>();
 
   form = this.fb.group({
-    entity_id:   ['', Validators.required],
-    name:        ['', Validators.required],
+    entity_id: ['', Validators.required],
+    name: ['', Validators.required],
     device_type: ['temperature' as DeviceType, Validators.required],
-    unit:        [''],
-    visibility:  ['public' as Visibility, Validators.required],
+    unit: [''],
+    visibility: ['public' as Visibility, Validators.required],
   });
 
   constructor(
     private deviceSvc: DeviceService,
     private http: HttpClient,
     private fb: FormBuilder,
-  ) {}
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit() { this.loadDevices(); }
 
   loadDevices() {
-    this.deviceSvc.getAll().subscribe(d => this.devices = d);
+    this.deviceSvc.getAll().subscribe({
+      next: (d) => {
+        this.devices = d;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error cargando dispositivos:', err);
+      }
+    });
   }
 
   // ── Auto-discovery ──────────────────────────────────────────────────────
 
   toggleDiscover() {
     this.showDiscover = !this.showDiscover;
-    this.showForm     = false;
+    this.showForm = false;
     if (this.showDiscover && this.discovered.length === 0) this.loadDiscover();
   }
 
   loadDiscover() {
     this.loadingDiscover = true;
-    this.discoverError   = '';
+    this.discoverError = '';
     this.http.get<DiscoveredEntity[]>(`${API}/devices/discover`).subscribe({
-      next: data => { this.discovered = data; this.loadingDiscover = false; },
-      error: ()  => { this.discoverError = 'No se pudo conectar a Home Assistant'; this.loadingDiscover = false; }
+      next: data => {
+        this.discovered = data;
+        this.loadingDiscover = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.discoverError = 'No se pudo conectar a Home Assistant';
+        this.loadingDiscover = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -235,21 +252,26 @@ export class AdminDevicesComponent implements OnInit {
     const entities = this.discovered
       .filter(e => this.selectedEntities.has(e.entity_id))
       .map(e => ({
-        entity_id:   e.entity_id,
-        name:        e.friendly_name,
+        entity_id: e.entity_id,
+        name: e.friendly_name,
         device_type: DC_MAP[e.device_class ?? ''] ?? 'other',
-        unit:        e.unit,
-        visibility:  'public',
+        unit: e.unit,
+        visibility: 'public',
       }));
 
     this.http.post(`${API}/devices/discover/import`, { entities }).subscribe({
       next: () => {
         this.selectedEntities.clear();
         this.loadDevices();
-        this.loadDiscover();   // refrescar para mostrar checkmarks de registrado
+        this.loadDiscover();
         this.importing = false;
+        this.cdr.detectChanges();
       },
-      error: () => { this.discoverError = 'Error al importar dispositivos'; this.importing = false; }
+      error: () => {
+        this.discoverError = 'Error al importar dispositivos';
+        this.importing = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
@@ -257,27 +279,53 @@ export class AdminDevicesComponent implements OnInit {
 
   create() {
     if (this.form.invalid) return;
-    this.creating    = true;
+    this.creating = true;
     this.createError = '';
     const p: DeviceCreate = {
-      entity_id:   this.form.value.entity_id!,
-      name:        this.form.value.name!,
+      entity_id: this.form.value.entity_id!,
+      name: this.form.value.name!,
       device_type: this.form.value.device_type! as DeviceType,
-      unit:        this.form.value.unit || undefined,
-      visibility:  this.form.value.visibility! as Visibility,
+      unit: this.form.value.unit || undefined,
+      visibility: this.form.value.visibility! as Visibility,
     };
     this.deviceSvc.create(p).subscribe({
-      next: () => { this.loadDevices(); this.form.reset({ device_type: 'temperature', visibility: 'public' }); this.showForm = false; this.creating = false; },
-      error: () => { this.createError = 'Error al crear el dispositivo'; this.creating = false; }
+      next: () => {
+        this.loadDevices();
+        this.form.reset({ device_type: 'temperature', visibility: 'public' });
+        this.showForm = false;
+        this.creating = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.createError = 'Error al crear el dispositivo';
+        this.creating = false;
+        this.cdr.detectChanges();
+      }
     });
   }
 
   toggleActive(d: Device) {
-    this.deviceSvc.update(d.id, { is_active: !d.is_active }).subscribe(() => this.loadDevices());
+    this.deviceSvc.update(d.id, { is_active: !d.is_active }).subscribe({
+      next: () => {
+        this.loadDevices();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error actualizando dispositivo:', err);
+      }
+    });
   }
 
   delete(id: number) {
     if (!confirm('¿Eliminar este dispositivo?')) return;
-    this.deviceSvc.delete(id).subscribe(() => this.loadDevices());
+    this.deviceSvc.delete(id).subscribe({
+      next: () => {
+        this.loadDevices();
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error eliminando dispositivo:', err);
+      }
+    });
   }
 }

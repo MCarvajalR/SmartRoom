@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core'; import { DatePipe } from '@angular/common';
 import { AccessService } from '../../core/services/access.service';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-access',
@@ -56,11 +56,14 @@ import { AccessService } from '../../core/services/access.service';
   styleUrl: './access.component.scss'
 })
 export class AccessComponent implements OnInit {
-  status  = 'locked';
+  status = 'locked';
   logs: any[] = [];
   loading = false;
 
-  constructor(private access: AccessService) {}
+  constructor(
+    private access: AccessService,
+    private cdr: ChangeDetectorRef
+  ) { }
 
   ngOnInit() {
     this.loadStatus();
@@ -68,20 +71,80 @@ export class AccessComponent implements OnInit {
   }
 
   loadStatus() {
-    this.access.getStatus().subscribe(res => this.status = res.state);
+    console.log('Consultando estado de puerta...');
+
+    this.access.getStatus().subscribe({
+      next: (res) => {
+        console.log('Estado recibido desde backend:', res);
+        this.status = res.state;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error consultando estado de puerta:', err);
+      }
+    });
   }
 
   loadLogs() {
-    this.access.getLogs().subscribe(data => this.logs = data);
+    console.log('Consultando historial de acceso...');
+
+    this.access.getLogs().subscribe({
+      next: (data) => {
+        console.log('Historial recibido:', data);
+        this.logs = data;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error consultando historial:', err);
+      }
+    });
   }
 
   unlock() {
+    console.log('Intentando abrir puerta...');
     this.loading = true;
-    this.access.unlock().subscribe({ next: () => { this.loadStatus(); this.loadLogs(); this.loading = false; }, error: () => this.loading = false });
+    this.cdr.detectChanges();
+
+    this.access.unlock()
+      .pipe(finalize(() => {
+        console.log('Finalizó petición de abrir');
+        this.loading = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: () => {
+          console.log('Puerta abierta correctamente');
+          this.status = 'unlocked';
+          this.loadLogs();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error al abrir la puerta:', err);
+        }
+      });
   }
 
   lock() {
+    console.log('Intentando cerrar puerta...');
     this.loading = true;
-    this.access.lock().subscribe({ next: () => { this.loadStatus(); this.loadLogs(); this.loading = false; }, error: () => this.loading = false });
+    this.cdr.detectChanges();
+
+    this.access.lock()
+      .pipe(finalize(() => {
+        console.log('Finalizó petición de cerrar');
+        this.loading = false;
+        this.cdr.detectChanges();
+      }))
+      .subscribe({
+        next: () => {
+          console.log('Puerta cerrada correctamente');
+          this.status = 'locked';
+          this.loadLogs();
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('Error al cerrar la puerta:', err);
+        }
+      });
   }
 }
