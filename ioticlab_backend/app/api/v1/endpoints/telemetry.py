@@ -1,10 +1,19 @@
+"""
+Endpoints de telemetría.
+
+Proporciona acceso a los datos de los sensores:
+- Último valor de cada sensor (público)
+- Historial de telemetría (público)
+- Disparo manual de recolección (solo admin)
+"""
+
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependencies import get_current_user, get_db, require_roles, get_optional_user, get_visible_levels
+from app.core.dependencies import get_current_user, get_db, get_optional_user, get_visible_levels, require_roles
 from app.models.device import Device
 from app.models.telemetry import TelemetryRecord
 from app.models.user import User
@@ -14,16 +23,12 @@ from app.services import telemetry_service
 router = APIRouter(prefix="/telemetry", tags=["Telemetría"])
 
 
-# ─── Endpoints PÚBLICOS (sin autenticación) ───────────────────────────────────
-
 @router.get("/latest", response_model=list[TelemetryLatest])
-async def get_latest(db: AsyncSession = Depends(get_db),
-                     current_user: User | None = Depends(get_optional_user),
-                     ):
-    """
-    Último valor de cada sensor activo.
-    PÚBLICO — cualquier visitante puede ver las métricas del laboratorio.
-    """
+async def get_latest(
+    db: AsyncSession = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user),
+):
+    """Retorna el último valor de cada sensor activo visible para el usuario."""
     levels = get_visible_levels(current_user)
     result = await db.execute(select(Device).where(Device.is_active == True, Device.visibility.in_(levels)))
     devices = result.scalars().all()
@@ -61,12 +66,9 @@ async def get_history(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
 ):
-    """
-    Historial de telemetría con filtros opcionales.
-    PÚBLICO — cualquier visitante puede consultar el historial.
-    """
+    """Retorna el historial de telemetría con filtros opcionales."""
     levels = get_visible_levels(current_user)
-    
+
     query = (
         select(TelemetryRecord, Device)
         .join(Device, TelemetryRecord.device_id == Device.id)
@@ -97,10 +99,8 @@ async def get_history(
     ]
 
 
-# ─── Endpoint PROTEGIDO (solo admin) ─────────────────────────────────────────
-
 @router.post("/collect", status_code=200)
 async def manual_collect(_: User = Depends(require_roles("admin"))):
-    """Dispara manualmente la recolección de telemetría. Solo admin."""
+    """Dispara manualmente la recolección de telemetría. Solo admins."""
     saved = await telemetry_service.collect_all()
     return {"message": f"Recolección completada: {saved} registros guardados"}

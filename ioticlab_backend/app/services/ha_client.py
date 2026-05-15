@@ -1,7 +1,14 @@
 """
 Cliente HTTP para la API REST de Home Assistant.
-Documentación: https://developers.home-assistant.io/docs/api/rest/
+
+Proporciona funciones para:
+- Obtener estados de entidades
+- Llamar a servicios de HA
+- Verificar disponibilidad de HA
+
+Documentación de la API: https://developers.home-assistant.io/docs/api/rest/
 """
+
 import logging
 
 import httpx
@@ -12,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 def _headers() -> dict:
+    """Genera headers de autenticación para Home Assistant."""
     return {
         "Authorization": f"Bearer {settings.HA_TOKEN}",
         "Content-Type": "application/json",
@@ -21,11 +29,16 @@ def _headers() -> dict:
 async def get_state(entity_id: str) -> dict | None:
     """
     Obtiene el estado actual de una entidad en Home Assistant.
-    Retorna el JSON completo o None si hay error.
+    
+    Args:
+        entity_id: Identificador de la entidad (ej: 'sensor.temperatura')
+    
+    Returns:
+        JSON completo del estado o None si hay error.
     """
     url = f"{settings.HA_URL}/api/states/{entity_id}"
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client: 
+        async with httpx.AsyncClient(timeout=3.0) as client:
             response = await client.get(url, headers=_headers())
             if response.status_code == 200:
                 return response.json()
@@ -39,7 +52,15 @@ async def get_state(entity_id: str) -> dict | None:
 async def call_service(domain: str, service: str, entity_id: str, extra: dict | None = None) -> bool:
     """
     Llama a un servicio de Home Assistant.
-    Ej: call_service("lock", "lock", "lock.puerta_principal")
+    
+    Args:
+        domain: Dominio del servicio (ej: 'lock', 'switch', 'input_boolean')
+        service: Nombre del servicio (ej: 'lock', 'turn_on', 'turn_off')
+        entity_id: Entidad sobre la que ejecutar el servicio
+        extra: Parámetros adicionales opcionales
+    
+    Returns:
+        True si el servicio se ejecutó correctamente.
     """
     url = f"{settings.HA_URL}/api/services/{domain}/{service}"
     payload: dict = {"entity_id": entity_id}
@@ -58,7 +79,7 @@ async def call_service(domain: str, service: str, entity_id: str, extra: dict | 
 
 
 async def ha_is_available() -> bool:
-    """Ping a la API de Home Assistant."""
+    """Verifica si Home Assistant está disponible."""
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(f"{settings.HA_URL}/api/", headers=_headers())

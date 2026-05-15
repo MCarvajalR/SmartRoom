@@ -1,26 +1,12 @@
 """
-Endpoint WebSocket para el frontend Angular.
+Endpoint WebSocket para transmisión de telemetría en tiempo real.
 
-El frontend se conecta a ws://localhost:8000/api/v1/ws/telemetry
-y recibe actualizaciones en tiempo real cada vez que HA reporta
-un cambio de estado en un dispositivo registrado en SmartRoom.
-
-Mensaje que recibe el frontend:
-{
-  "type":        "state_update",
-  "device_id":   1,
-  "entity_id":   "input_number.temp_simulada",
-  "device_name": "Temperatura Simulada",
-  "device_type": "temperature",
-  "unit":        "°C",
-  "value":       23.5,
-  "raw_state":   "23.5",
-  "recorded_at": "2026-04-11T14:35:00+00:00",
-  "visibility":  "public"
-}
+El frontend se conecta a este endpoint para recibir actualizaciones
+instantáneas de los dispositivos cuando Home Assistant reporta cambios.
 """
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
 from app.services.ha_websocket import add_frontend_client, remove_frontend_client
 
 router = APIRouter()
@@ -28,10 +14,15 @@ router = APIRouter()
 
 @router.websocket("/ws/telemetry")
 async def telemetry_websocket(websocket: WebSocket):
+    """
+    WebSocket para recibir actualizaciones de telemetría en tiempo real.
+    
+    El servidor transmite mensajes tipo 'state_update' cada vez que
+    Home Assistant reporta un cambio de estado de un dispositivo.
+    """
     await websocket.accept()
     await add_frontend_client(websocket)
     try:
-        # Mantener la conexión viva esperando mensajes (ping del cliente)
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:

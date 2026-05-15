@@ -1,3 +1,13 @@
+"""
+Endpoints de gestión de dispositivos.
+
+Proporciona CRUD completo de dispositivos registrados:
+- Listado de dispositivos
+- Creación de dispositivos (solo admin)
+- Actualización de dispositivos (solo admin)
+- Eliminación de dispositivos (solo admin)
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,8 +24,8 @@ router = APIRouter(prefix="/devices", tags=["Dispositivos"])
 async def list_devices(
     db: AsyncSession = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
-    #_: User = Depends(get_current_user),
 ):
+    """Lista todos los dispositivos visibles según el rol del usuario."""
     levels = get_visible_levels(current_user)
     result = await db.execute(select(Device).where(Device.visibility.in_(levels)))
     return result.scalars().all()
@@ -27,6 +37,7 @@ async def create_device(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles("admin")),
 ):
+    """Crea un nuevo dispositivo. Solo accesible por administradores."""
     existing = await db.execute(select(Device).where(Device.entity_id == payload.entity_id))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="Ya existe un dispositivo con ese entity_id")
@@ -45,6 +56,7 @@ async def update_device(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles("admin")),
 ):
+    """Actualiza un dispositivo existente. Solo accesible por administradores."""
     result = await db.execute(select(Device).where(Device.id == device_id))
     device = result.scalar_one_or_none()
     if not device:
@@ -64,6 +76,7 @@ async def delete_device(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles("admin")),
 ):
+    """Elimina un dispositivo. Solo accesible por administradores."""
     result = await db.execute(select(Device).where(Device.id == device_id))
     device = result.scalar_one_or_none()
     if not device:

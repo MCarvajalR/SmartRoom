@@ -1,9 +1,12 @@
 """
-Colector de telemetría: consulta HA por cada dispositivo activo
-y guarda el resultado en la base de datos.
+Servicio de recolección de telemetría.
+
+Consulta el estado de todos los dispositivos activos en Home Assistant
+y guarda los registros en la base de datos.
 """
-import logging
+
 import asyncio
+import logging
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def _parse_value(raw: str) -> float | None:
-    """Intenta convertir el estado crudo a float."""
+    """Convierte el estado textual a número."""
     try:
         return float(raw)
     except (ValueError, TypeError):
@@ -39,18 +42,12 @@ async def collect_all(db: AsyncSession | None = None) -> int:
         result = await db.execute(select(Device).where(Device.is_active == True))
         devices = result.scalars().all()
 
-        # Ejecución en paralelo
-        # Creamos una lista de tareas (tasks)
         tasks = [ha_client.get_state(device.entity_id) for device in devices]
-
-        # asyncio.gather lanza todas las peticiones a la vez
         states_data = await asyncio.gather(*tasks)
 
         saved = 0
-        # state_data_list = await asyncio.gather(*tasks, return_exceptions=True)
         for device, state_data in zip(devices, states_data):
             if state_data is None:
-                #logger.warning("No se pudo obtener estado de %s", device.entity_id)
                 continue
 
             raw_state: str = state_data.get("state", "unknown")

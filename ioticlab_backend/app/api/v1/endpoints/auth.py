@@ -1,3 +1,12 @@
+"""
+Endpoints de autenticación y gestión de usuarios.
+
+Proporciona:
+- Login de usuarios
+- Obtención del usuario actual
+- Creación, listado y eliminación de usuarios (solo admin)
+"""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,6 +21,7 @@ router = APIRouter(prefix="/auth", tags=["Autenticación"])
 
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+    """Autentica un usuario y retorna un token JWT."""
     result = await db.execute(select(User).where(User.username == payload.username))
     user = result.scalar_one_or_none()
 
@@ -29,10 +39,9 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 async def me(current_user: User = Depends(get_current_user)):
+    """Retorna la información del usuario autenticado."""
     return current_user
 
-
-# ─── Gestión de usuarios (solo admin) ────────────────────────────────────────
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
@@ -40,6 +49,7 @@ async def create_user(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles("admin")),
 ):
+    """Crea un nuevo usuario. Solo accesible por administradores."""
     existing = await db.execute(select(User).where(User.username == payload.username))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="El nombre de usuario ya existe")
@@ -61,6 +71,7 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles("admin")),
 ):
+    """Lista todos los usuarios del sistema. Solo accesible por administradores."""
     result = await db.execute(select(User))
     return result.scalars().all()
 
@@ -71,6 +82,7 @@ async def delete_user(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("admin")),
 ):
+    """Elimina un usuario por ID. Solo accesible por administradores."""
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
     if not user:

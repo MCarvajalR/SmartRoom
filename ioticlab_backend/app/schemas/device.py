@@ -1,9 +1,12 @@
+"""Schemas de dispositivos."""
+
 from datetime import datetime
 
 from pydantic import BaseModel
 
 
 class DeviceCreate(BaseModel):
+    """Datos para crear un nuevo dispositivo."""
     entity_id: str
     name: str
     device_type: str = "other"
@@ -12,6 +15,7 @@ class DeviceCreate(BaseModel):
 
 
 class DeviceUpdate(BaseModel):
+    """Datos para actualizar un dispositivo existente."""
     name: str | None = None
     device_type: str | None = None
     unit: str | None = None
@@ -20,6 +24,7 @@ class DeviceUpdate(BaseModel):
 
 
 class DeviceResponse(BaseModel):
+    """Datos de dispositivo retornados por la API."""
     id: int
     entity_id: str
     name: str

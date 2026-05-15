@@ -1,3 +1,13 @@
+"""
+Dependencias FastAPI para autenticación y autorización.
+
+Proporciona funciones de dependency injection para:
+- Sesiones de base de datos
+- Obtención del usuario actual desde token JWT
+- Verificación de roles
+- Control de visibilidad según rol
+"""
+
 from typing import AsyncGenerator
 
 from fastapi import Depends, HTTPException, status
@@ -13,6 +23,7 @@ bearer_scheme = HTTPBearer()
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Proporciona una sesión de base de datos."""
     async with AsyncSessionLocal() as session:
         yield session
 
@@ -21,6 +32,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    """Obtiene el usuario actual a partir del token JWT."""
     token = credentials.credentials
     payload = decode_access_token(token)
     if not payload:
@@ -38,7 +50,11 @@ async def get_current_user(
 
 
 def require_roles(*roles: str):
-    """Dependency factory: require_roles('admin', 'docente')"""
+    """
+    Generador de dependencias para verificar roles.
+    
+    Uso: require_roles('admin', 'docente')
+    """
     async def _check(current_user: User = Depends(get_current_user)) -> User:
         if current_user.role not in roles:
             raise HTTPException(
@@ -48,12 +64,15 @@ def require_roles(*roles: str):
         return current_user
     return _check
 
+
 bearer_scheme_optional = HTTPBearer(auto_error=False)
+
 
 async def get_optional_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme_optional),
     db: AsyncSession = Depends(get_db),
 ) -> User | None:
+    """Obtiene el usuario actual si existe token válido, o None si no hay token."""
     if not credentials:
         return None
     payload = decode_access_token(credentials.credentials)
@@ -68,6 +87,13 @@ async def get_optional_user(
 
 
 def get_visible_levels(user: User | None) -> list[str]:
+    """
+    Retorna los niveles de visibilidad accesibles según el rol del usuario.
+    
+    - Anónimo: solo 'public'
+    - Docente: 'public', 'docente'
+    - Admin: todos los niveles
+    """
     if user is None:
         return ["public"]
     if user.role == "admin":

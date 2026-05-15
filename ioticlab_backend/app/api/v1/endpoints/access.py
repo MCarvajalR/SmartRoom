@@ -1,3 +1,13 @@
+"""
+Endpoints de control de acceso a la puerta del laboratorio.
+
+Proporciona:
+- Consulta del estado actual de la puerta
+- Bloqueo de la puerta (solo admin)
+- Desbloqueo de la puerta (admin y docente)
+- Historial de eventos de acceso
+"""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +20,6 @@ from app.services.ha_client import call_service, get_state
 
 router = APIRouter(prefix="/access", tags=["Control de Acceso"])
 
-# entity_id del lock/puerta en Home Assistant
 DOOR_ENTITY_ID = "input_boolean.puerta_laboratorio_simulada"
 
 
@@ -19,7 +28,7 @@ async def get_door_state(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Estado actual de la cerradura."""
+    """Retorna el estado actual de la puerta del laboratorio."""
     state_data = await get_state(DOOR_ENTITY_ID)
     if not state_data:
         raise HTTPException(status_code=502, detail="No se pudo conectar con Home Assistant")
@@ -38,9 +47,9 @@ async def get_door_state(
     door_state = "unlocked" if ha_state == "on" else "locked"
 
     return DoorStateResponse(
-    entity_id=DOOR_ENTITY_ID,
-    state=door_state,
-    friendly_name=attrs.get("friendly_name"),
+        entity_id=DOOR_ENTITY_ID,
+        state=door_state,
+        friendly_name=attrs.get("friendly_name"),
     )
 
 
@@ -49,7 +58,7 @@ async def lock_door(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("admin")),
 ):
-    """Bloquear la puerta (solo admin)."""
+    """Bloquea la puerta del laboratorio. Solo accesible por administradores."""
     success = await call_service("input_boolean", "turn_off", DOOR_ENTITY_ID)
     if not success:
         raise HTTPException(status_code=502, detail="Error al ejecutar el servicio en Home Assistant")
@@ -65,7 +74,7 @@ async def unlock_door(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_roles("admin", "docente")),
 ):
-    """Desbloquear la puerta (admin y docente)."""
+    """Desbloquea la puerta del laboratorio. Accesible por admin y docente."""
     success = await call_service("input_boolean", "turn_on", DOOR_ENTITY_ID)
     if not success:
         raise HTTPException(status_code=502, detail="Error al ejecutar el servicio en Home Assistant")
@@ -82,7 +91,7 @@ async def get_logs(
     db: AsyncSession = Depends(get_db),
     _: User = Depends(require_roles("admin", "docente")),
 ):
-    """Historial de eventos de acceso."""
+    """Retorna el historial de eventos de acceso. Accesible por admin y docente."""
     result = await db.execute(
         select(AccessLog).order_by(desc(AccessLog.triggered_at)).limit(limit)
     )
