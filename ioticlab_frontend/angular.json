@@ -7,7 +7,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "damba_frontend": {
+    "smartroom_frontend": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -62,10 +62,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "damba_frontend:build:production"
+              "buildTarget": "smartroom_frontend:build:production"
             },
             "development": {
-              "buildTarget": "damba_frontend:build:development"
+              "buildTarget": "smartroom_frontend:build:development"
             }
           },
           "defaultConfiguration": "development"

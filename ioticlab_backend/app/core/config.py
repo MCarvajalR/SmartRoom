@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     )
 
     # PostgreSQL
-    DATABASE_URL: str = "postgresql+asyncpg://damba_user:damba_pass@db:5432/damba_db"
+    DATABASE_URL: str = "postgresql+asyncpg://ioticlab:iot1cl4b@smartroom_postgres:5432/ioticlab_db"
 
     # JWT
     JWT_SECRET_KEY: str = "dev-secret-change-in-production"

@@ -10,7 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
     <aside class="sidebar">
       <!-- 1. LOGO: Identidad visual idéntica -->
       <div class="sidebar-logo">
-        <h2><i class="fa-brands fa-battle-net"></i> DAMBA</h2>
+        <h2><i class="fa-brands fa-battle-net"></i> SMARTROOM</h2>
       </div>
       
       <nav class="sidebar-nav">

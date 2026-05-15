@@ -3,7 +3,7 @@ Colector de telemetría: consulta HA por cada dispositivo activo
 y guarda el resultado en la base de datos.
 """
 import logging
-import asyncio # <--- Asegúrate de importar esto
+import asyncio
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,7 +39,7 @@ async def collect_all(db: AsyncSession | None = None) -> int:
         result = await db.execute(select(Device).where(Device.is_active == True))
         devices = result.scalars().all()
 
-        # RIGOR TÉCNICO: Ejecución en paralelo
+        # Ejecución en paralelo
         # Creamos una lista de tareas (tasks)
         tasks = [ha_client.get_state(device.entity_id) for device in devices]
 

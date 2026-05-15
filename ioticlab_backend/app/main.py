@@ -82,7 +82,7 @@ async def discover_ha_devices() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Gestiona el ciclo de vida completo de la aplicación."""
-    logger.info("Iniciando DAMBA Backend v2.0 ...")
+    logger.info("Iniciando SmartRoom Backend...")
 
     # 1. Crear tablas
     async with engine.begin() as conn:
@@ -96,12 +96,12 @@ async def lifespan(app: FastAPI):
         if not result.scalar_one_or_none():
             db.add(User(
                 username="admin",
-                email="admin@damba.local",
+                email="admin@smartroom.local",
                 hashed_password=hash_password("admin123"),
                 role="admin",
             ))
             await db.commit()
-            logger.info("Usuario admin creado (admin / admin123) — CAMBIAR EN PRODUCCIÓN.")
+            logger.info("Usuario admin creado (admin / admin123)")
 
     # 3. Scheduler de telemetría
     scheduler.add_job(
@@ -137,7 +137,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="DAMBA — Laboratorio Inteligente API",
+    title="SmartRoom — Laboratorio Inteligente API",
     version="2.0.0",
     description="Backend para monitoreo IoT con Home Assistant",
     lifespan=lifespan,   # ← usa lifespan en vez de on_event
@@ -155,4 +155,4 @@ app.include_router(api_router)  # ← solo esta línea, sin discover_router suel
 
 @app.get("/", tags=["Root"])
 async def root():
-    return {"message": "DAMBA API v2.0 — visita /docs para la documentación"}
+    return {"message": "SmartRoom API v2.0 — visita /docs para la documentación"}

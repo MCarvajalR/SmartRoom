@@ -5,7 +5,7 @@ Flujo:
   1. Al arrancar la app, `start_ha_listener()` abre una conexión WS con HA.
   2. Se suscribe al evento `state_changed`.
   3. Cuando HA notifica un cambio de estado:
-     a. Verifica si la entidad está registrada en DAMBA (tabla devices).
+     a. Verifica si la entidad está registrada en SmartRoom (tabla devices).
      b. Guarda el nuevo valor en la tabla telemetry.
      c. Hace broadcast a todos los clientes frontend conectados.
   4. Si la conexión se corta, reintenta automáticamente cada 5 segundos.
@@ -175,7 +175,7 @@ async def process_state_change(event_data: dict) -> None:
         logger.info(f"[ACCESS LOG] Puerta → {action}")
     """
     Recibe el payload de un evento state_changed de HA.
-    Si la entidad está registrada en DAMBA: guarda en DB y hace broadcast.
+    Si la entidad está registrada en SmartRoom: guarda en DB y hace broadcast.
     """
     EXCLUDED_PREFIXES = (
         "person.", "zone.", "sun.", "weather.", "tts.",

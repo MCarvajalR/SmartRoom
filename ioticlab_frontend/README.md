@@ -1,6 +1,6 @@
-# DAMBA Frontend — Angular 19
+# SmartRoom Frontend — Angular 19
 
-Panel de monitoreo IoT para el sistema DAMBA.  
+Panel de monitoreo IoT para el sistema SmartRoom.  
 Stack: **Angular 19 standalone** · **SCSS** · **Signals** · **Lazy-loading**
 
 ---
@@ -16,8 +16,8 @@ Stack: **Angular 19 standalone** · **SCSS** · **Signals** · **Lazy-loading**
 
 ```bash
 # 1. Crear el proyecto base con Angular CLI
-ng new damba_frontend --routing --style=scss --standalone
-cd damba_frontend
+ng new smartroom_frontend --routing --style=scss --standalone
+cd smartroom_frontend
 
 # 2. Eliminar los archivos que Angular genera por defecto
 rm src/app/app.component.ts src/app/app.component.spec.ts
@@ -36,10 +36,10 @@ ng serve --open
 
 ### Opción B — Usar directamente (si ya tienes un proyecto)
 ```bash
-cp -r damba_frontend/src/app/* TU_PROYECTO/src/app/
-cp damba_frontend/src/styles.scss TU_PROYECTO/src/styles.scss
-cp damba_frontend/src/main.ts TU_PROYECTO/src/main.ts
-cp damba_frontend/src/index.html TU_PROYECTO/src/index.html
+cp -r smartroom_frontend/src/app/* TU_PROYECTO/src/app/
+cp smartroom_frontend/src/styles.scss TU_PROYECTO/src/styles.scss
+cp smartroom_frontend/src/main.ts TU_PROYECTO/src/main.ts
+cp smartroom_frontend/src/index.html TU_PROYECTO/src/index.html
 ```
 
 ---

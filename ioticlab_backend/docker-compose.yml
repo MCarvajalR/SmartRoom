@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: damba_postgres
+    container_name: smartroom_postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -18,7 +18,7 @@ services:
 
   backend:
     build: .
-    container_name: damba_backend
+    container_name: smartroom_backend
     env_file: .env
     ports:
       - "8000:8000"

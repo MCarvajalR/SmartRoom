@@ -3,7 +3,7 @@ Endpoint WebSocket para el frontend Angular.
 
 El frontend se conecta a ws://localhost:8000/api/v1/ws/telemetry
 y recibe actualizaciones en tiempo real cada vez que HA reporta
-un cambio de estado en un dispositivo registrado en DAMBA.
+un cambio de estado en un dispositivo registrado en SmartRoom.
 
 Mensaje que recibe el frontend:
 {

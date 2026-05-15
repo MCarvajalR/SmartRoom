@@ -15,7 +15,7 @@ interface DiscoveredEntity {
 
 const API = 'http://localhost:8000/api/v1';
 
-// Mapeo automático device_class de HA → device_type de DAMBA
+// Mapeo automático device_class de HA → device_type de SMARTROOM
 const DC_MAP: Record<string, DeviceType> = {
   temperature: 'temperature',
   humidity: 'humidity',

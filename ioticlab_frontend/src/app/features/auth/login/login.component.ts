@@ -11,7 +11,7 @@ import { AuthService } from '../../../core/services/auth.service';
     <div class="login-wrap">
       <div class="login-card">
         <h1>Iniciar sesión</h1>
-        <p class="sub">Panel de monitoreo DAMBA</p>
+        <p class="sub">Panel de monitoreo SMARTROOM</p>
 
         <form [formGroup]="form" (ngSubmit)="submit()">
           <div class="field">
