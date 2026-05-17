@@ -1,0 +1,13 @@
+<div class="main-wrapper">
+  <!-- Solo renderizamos el Sidebar si el usuario está logueado -->
+  @if (auth.isLoggedIn()) {
+    <app-sidebar></app-sidebar>
+  }
+
+  <main class="app-content">
+    <!-- El Topbar se muestra siempre para permitir login -->
+    <app-topbar></app-topbar>
+    
+    <router-outlet />
+  </main>
+</div>

@@ -1,0 +1,72 @@
+<div class="dashboard">
+    <div class="page-header">
+        <div class="header-left">
+            <h2>Panel de Monitoreo</h2>
+            <span class="rt-badge" [ngClass]="'rt-' + realtime.status()">
+                <span class="rt-dot"></span>
+                {{ rtLabel() }}
+            </span>
+        </div>
+
+        <div class="header-actions">
+        <!-- 
+            El botón se oculta cuando el WS está conectado.
+            Justificación: en modo TV no hay usuario. Si el WS funciona,
+            el botón es ruido visual innecesario. Solo aparece como fallback
+            cuando hay desconexión.
+        -->
+        @if (realtime.status() !== 'connected') {
+            <button class="btn-refresh" (click)="manualRefresh()" [disabled]="isRefreshing">
+            <i class="fas fa-sync-alt" [class.fa-spin]="isRefreshing"></i>
+            <span>{{ isRefreshing ? 'Actualizando...' : 'Refrescar' }}</span>
+            </button>
+        }
+        <span class="last-update">
+            @if (lastUpdate) { Última actualización: {{ lastUpdate | date:'HH:mm:ss' }} }
+        </span>
+        </div>
+    </div>
+
+    <div class="metrics-grid">
+        @if (isInitialLoading && devices.length === 0) {
+            @for (i of [1,2,3]; track i) {
+                <div class="metric-card skeleton"></div>
+            }
+        }
+
+        <!-- Error visible: si falló tras todos los reintentos -->
+        @if (loadError && !isInitialLoading && devices.length === 0) {
+        <div class="load-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>No se pudo conectar al servidor.</p>
+            <button class="btn-refresh" (click)="loadInitial()">Reintentar</button>
+        </div>
+        }
+
+        @for (d of devices; track d.device_id) {
+            <div class="metric-card" [ngClass]="['type-' + d.device_type, isOnState(d.raw_state) ? 'state-on' : 'state-off']"
+                [class.updated]="recentlyUpdated.has(d.device_id)">
+                <div class="card-header">
+                    <span class="device-name">{{ d.device_name }}</span>
+                    <i class="fas" [ngClass]="getDeviceIcon(d.device_type, d.raw_state)"></i>
+                </div>
+                <div class="card-body">
+                    @if (isSwitchDevice(d.device_type)) {
+                    <div class="status-badge">
+                        <span class="status-text">{{ isOnState(d.raw_state) ? 'ABIERTA' : 'CERRADA' }}</span>
+                    </div>
+                    } @else {
+                    <div class="numeric-value">
+                        <span class="value-num">{{ d.value | number:'1.1-1' }}</span>
+                        <span class="value-unit">{{ d.unit ?? '' }}</span>
+                    </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <span class="entity-id" [title]="d.entity_id">{{ d.entity_id }}</span>
+                    <span class="record-time">{{ d.recorded_at | date:'HH:mm:ss' }}</span>
+                </div>
+            </div>
+        }
+    </div>
+</div>

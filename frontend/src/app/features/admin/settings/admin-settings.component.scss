@@ -1,0 +1,107 @@
+.admin-page {
+  max-width: var(--content-wide);
+  margin: 0 auto;
+  h2 { font-size: var(--text-xl); font-weight: 700; }
+  h3 { font-size: var(--text-lg); font-weight: 600; margin-bottom: var(--space-3); }
+}
+
+.page-header {
+  margin-bottom: var(--space-8);
+}
+
+.config-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
+  box-shadow: var(--shadow-sm);
+
+  .description {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-4);
+  }
+}
+
+.interval-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  input {
+    width: 120px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+  }
+
+  span {
+    color: var(--color-text-muted);
+  }
+}
+
+.btn-primary {
+  padding: var(--space-2) var(--space-6);
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  &:hover:not(:disabled) { background: var(--color-primary-hover); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.success-msg {
+  color: var(--color-success);
+  font-size: var(--text-sm);
+  margin-top: var(--space-3);
+}
+
+.current-value {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  margin-top: var(--space-2);
+}
+
+.device-select {
+  margin-bottom: var(--space-4);
+
+  select {
+    width: 100%;
+    max-width: 400px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    background: var(--color-bg);
+  }
+}
+
+.loading, .empty-msg {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  padding: var(--space-4);
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-4);
+  
+  th, td {
+    padding: var(--space-3);
+    text-align: left;
+    font-size: var(--text-sm);
+    border-bottom: 1px solid var(--color-divider);
+  }
+  
+  th {
+    color: var(--color-text-muted);
+    font-weight: 600;
+    background: var(--color-surface-offset);
+  }
+}
