@@ -12,7 +12,9 @@
 .main-wrapper {
   display: flex;
   min-height: 100vh;
-  background-color: var(--bg-main); // <-- Fondo gris claro
+  width: 100%;
+  /* Eliminamos cualquier fondo blanco que pueda venir por defecto */
+  background: transparent; 
 }
 
 // Estilos del Sidebar
@@ -59,13 +61,22 @@
 // Estilos del área donde cargan las páginas
 .app-content {
   flex-grow: 1;
+  display: flex;
+  flex-direction: column;
   padding: 40px;
+  min-height: 100vh;
+  background: #0f172a;
   color: var(--text-primary); // <-- FORZAMOS que las letras sean OSCURAS
   font-family: 'Inter', sans-serif;
   
   // Esto asegura que cualquier texto dentro sea visible
   h1, h2, h3, p, span, td, th {
     color: var(--text-primary);
+  }
+  /* ESTADO ESPECIAL PARA EL LOGIN */
+  &.login-mode {
+    padding: 0 !important;
+    background-color: #0f172a; // Aseguramos el fondo oscuro del login
   }
 }
 

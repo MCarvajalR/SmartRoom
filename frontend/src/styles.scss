@@ -227,3 +227,16 @@ a {
     transition-duration: 0.01ms !important;
   }
 }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+}
+
+/* Opcional: Asegura que el root de Angular ocupe todo */
+app-root {
+  display: block;
+  height: 100%;
+}

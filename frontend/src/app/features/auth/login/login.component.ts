@@ -7,34 +7,48 @@ import { AuthService } from '../../../core/services/auth.service';
   selector: 'app-login',
   standalone: true,
   imports: [ReactiveFormsModule],
-  template: `
+  // En el decorador @Component, actualiza el template:
+template: `
     <div class="login-wrap">
       <div class="login-card">
         <h1>Iniciar sesión</h1>
-        <p class="sub">Panel de monitoreo SMARTROOM</p>
+        <p class="sub">Gestión de Laboratorio Inteligente</p>
 
         <form [formGroup]="form" (ngSubmit)="submit()">
           <div class="field">
             <label for="username">Usuario</label>
-            <input id="username" type="text" formControlName="username" />
+            <input 
+              id="username" 
+              type="text" 
+              formControlName="username" 
+              placeholder="Ej. admin"
+              autocomplete="username" />
           </div>
           <div class="field">
             <label for="password">Contraseña</label>
-            <input id="password" type="password" formControlName="password" />
+            <input 
+              id="password" 
+              type="password" 
+              formControlName="password" 
+              placeholder="••••••••"
+              autocomplete="current-password" />
           </div>
 
-          @if (error) {
-            <p class="error-msg">{{ error }}</p>
-          }
+          <div style="min-height: 24px;"> @if (error) {
+              <p class="error-msg" style="color: #fb7185; font-size: 0.85rem; margin-bottom: 16px;">
+                <i class="fas fa-exclamation-circle"></i> {{ error }}
+              </p>
+            }
+          </div>
 
           <button type="submit" class="btn-submit" [disabled]="loading">
-            {{ loading ? 'Ingresando...' : 'Ingresar' }}
+            {{ loading ? 'Verificando...' : 'Ingresar al sistema' }}
           </button>
         </form>
 
         <div class="guest-link">
-          <a (click)="goAsGuest()">Ver como invitado</a>
-          <span>(accede a dispositivos públicos sin iniciar sesión)</span>
+          <a (click)="goAsGuest()">Explorar como invitado</a>
+          <span>Monitoreo de dispositivos públicos</span>
         </div>
       </div>
     </div>

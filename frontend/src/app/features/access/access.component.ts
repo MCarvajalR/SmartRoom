@@ -12,13 +12,13 @@ import { finalize } from 'rxjs';
 
       <div class="door-card">
         <div class="door-status" [class.unlocked]="status === 'unlocked'">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             @if (status === 'locked') {
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              <rect x="5" y="11" width="14" height="10" rx="2" stroke-linecap="round"/>
+              <path d="M8 11V7a4 4 0 1 1 8 0v4" stroke-linecap="round"/>
             } @else {
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+              <rect x="5" y="11" width="14" height="10" rx="2" stroke-linecap="round"/>
+              <path d="M8 11V5a4 4 0 0 1 7.5-2" stroke-linecap="round" />
             }
           </svg>
           <span>{{ status === 'locked' ? 'Cerrado' : 'Abierto' }}</span>
