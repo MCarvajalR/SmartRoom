@@ -8,6 +8,8 @@
       <app-topbar></app-topbar>
     }
     
-    <router-outlet />
+    <div class="route-frame" [class.fade-route]="!isLoginRoute">
+      <router-outlet />
+    </div>
   </main>
 </div>

@@ -151,21 +151,6 @@ async def process_state_change(event_data: dict) -> None:
         await broadcast_to_frontend(broadcast_payload)
         logger.info("[RT] %s → %s", entity_id, raw_state)
 
-    door_entity_id = await get_door_entity_id()
-    if door_entity_id and entity_id == door_entity_id:
-        from app.models.access_log import AccessLog
-
-        action = "unlock" if raw_state in ("on", "open", "unlocked") else "lock"
-        async with AsyncSessionLocal() as log_db:
-            log_db.add(AccessLog(
-                entity_id=entity_id,
-                action=action,
-                triggered_by="homeassistant",
-            ))
-            await log_db.commit()
-        logger.info("[ACCESS LOG] Puerta → %s", action)
-
-
 async def get_door_entity_id() -> str | None:
     """Obtiene el entity_id del dispositivo de puerta desde la configuración."""
     from sqlalchemy import select

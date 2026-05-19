@@ -1,4 +1,5 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core'; import { DatePipe } from '@angular/common';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { AccessService } from '../../core/services/access.service';
 import { finalize } from 'rxjs';
 
@@ -8,49 +9,66 @@ import { finalize } from 'rxjs';
   imports: [DatePipe],
   template: `
     <div class="access-page">
-      <h2>Control de acceso</h2>
-
-      <div class="door-card">
-        <div class="door-status" [class.unlocked]="status === 'unlocked'">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            @if (status === 'locked') {
-              <rect x="5" y="11" width="14" height="10" rx="2" stroke-linecap="round"/>
-              <path d="M8 11V7a4 4 0 1 1 8 0v4" stroke-linecap="round"/>
-            } @else {
-              <rect x="5" y="11" width="14" height="10" rx="2" stroke-linecap="round"/>
-              <path d="M8 11V5a4 4 0 0 1 7.5-2" stroke-linecap="round" />
-            }
-          </svg>
-          <span>{{ status === 'locked' ? 'Cerrado' : 'Abierto' }}</span>
+      <section class="access-hero">
+        <div class="access-heading">
+          <h2>Control de acceso</h2>
+          <p>Estado y apertura de la puerta del laboratorio</p>
         </div>
 
-        <div class="door-actions">
-          <button class="btn-unlock" (click)="unlock()" [disabled]="loading">
-            Abrir
-          </button>
-          <button class="btn-lock" (click)="lock()" [disabled]="loading">
-            Cerrar
-          </button>
-        </div>
-      </div>
+        <div class="door-card">
+          <div class="door-status" [class.unlocked]="status === 'unlocked'">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              @if (status === 'locked') {
+                <rect x="5" y="11" width="14" height="10" rx="2" stroke-linecap="round"/>
+                <path d="M8 11V7a4 4 0 1 1 8 0v4" stroke-linecap="round"/>
+              } @else {
+                <rect x="5" y="11" width="14" height="10" rx="2" stroke-linecap="round"/>
+                <path d="M8 11V5a4 4 0 0 1 7.5-2" stroke-linecap="round" />
+              }
+            </svg>
+            <span>{{ status === 'locked' ? 'Cerrado' : 'Abierto' }}</span>
+          </div>
 
-      <div class="logs-section">
-        <h3>Historial de acceso</h3>
-        <table class="logs-table">
-          <thead>
-            <tr><th>Fecha</th><th>Acción</th><th>Usuario</th></tr>
-          </thead>
-          <tbody>
-            @for (log of logs; track log.id) {
-              <tr>
-                <td>{{ log.triggered_at | date:'dd/MM/yy HH:mm:ss' }}</td>
-                <td><span class="action-badge action-{{ log.action }}">{{ log.action }}</span></td>
-                <td>{{ log.triggered_by }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+          <div class="door-actions">
+            <button class="btn-unlock" (click)="unlock()" [disabled]="loading">
+              Abrir
+            </button>
+            <button class="btn-lock" (click)="lock()" [disabled]="loading">
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="logs-section">
+        <div class="section-title">
+          <h3>Historial de acceso</h3>
+          <span>{{ logs.length }} registros</span>
+        </div>
+
+        <div class="table-wrap">
+          <table class="logs-table">
+            <thead>
+              <tr><th>Fecha</th><th>Acción</th><th>Usuario</th></tr>
+            </thead>
+            <tbody>
+              @for (log of visibleLogs; track log.id) {
+                <tr>
+                  <td>{{ log.triggered_at | date:'dd/MM/yy HH:mm:ss' }}</td>
+                  <td><span class="action-badge action-{{ log.action }}">{{ actionLabel(log.action) }}</span></td>
+                  <td>{{ log.triggered_by }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (logs.length > initialLogLimit) {
+          <button class="toggle-logs" type="button" (click)="showAllLogs = !showAllLogs">
+            {{ showAllLogs ? 'Mostrar menos' : 'Mostrar todos' }}
+          </button>
+        }
+      </section>
     </div>
   `,
   styleUrl: './access.component.scss'
@@ -59,11 +77,17 @@ export class AccessComponent implements OnInit {
   status = 'locked';
   logs: any[] = [];
   loading = false;
+  showAllLogs = false;
+  readonly initialLogLimit = 5;
 
   constructor(
     private access: AccessService,
     private cdr: ChangeDetectorRef
-  ) { }
+  ) {}
+
+  get visibleLogs() {
+    return this.showAllLogs ? this.logs : this.logs.slice(0, this.initialLogLimit);
+  }
 
   ngOnInit() {
     this.loadStatus();
@@ -71,11 +95,8 @@ export class AccessComponent implements OnInit {
   }
 
   loadStatus() {
-    console.log('Consultando estado de puerta...');
-
     this.access.getStatus().subscribe({
       next: (res) => {
-        console.log('Estado recibido desde backend:', res);
         this.status = res.state;
         this.cdr.detectChanges();
       },
@@ -86,12 +107,11 @@ export class AccessComponent implements OnInit {
   }
 
   loadLogs() {
-    console.log('Consultando historial de acceso...');
-
     this.access.getLogs().subscribe({
       next: (data) => {
-        console.log('Historial recibido:', data);
-        this.logs = data;
+        this.logs = data.filter(log =>
+          (log.action === 'lock' || log.action === 'unlock') && log.triggered_by !== 'homeassistant'
+        );
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -100,20 +120,26 @@ export class AccessComponent implements OnInit {
     });
   }
 
+  actionLabel(action: string) {
+    const labels: Record<string, string> = {
+      unlock: 'Abrir',
+      lock: 'Cerrar',
+    };
+
+    return labels[action] ?? action;
+  }
+
   unlock() {
-    console.log('Intentando abrir puerta...');
     this.loading = true;
     this.cdr.detectChanges();
 
     this.access.unlock()
       .pipe(finalize(() => {
-        console.log('Finalizó petición de abrir');
         this.loading = false;
         this.cdr.detectChanges();
       }))
       .subscribe({
         next: () => {
-          console.log('Puerta abierta correctamente');
           this.status = 'unlocked';
           this.loadLogs();
           this.cdr.detectChanges();
@@ -125,19 +151,16 @@ export class AccessComponent implements OnInit {
   }
 
   lock() {
-    console.log('Intentando cerrar puerta...');
     this.loading = true;
     this.cdr.detectChanges();
 
     this.access.lock()
       .pipe(finalize(() => {
-        console.log('Finalizó petición de cerrar');
         this.loading = false;
         this.cdr.detectChanges();
       }))
       .subscribe({
         next: () => {
-          console.log('Puerta cerrada correctamente');
           this.status = 'locked';
           this.loadLogs();
           this.cdr.detectChanges();

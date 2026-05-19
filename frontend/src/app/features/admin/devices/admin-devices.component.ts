@@ -3,6 +3,7 @@ import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { DeviceService } from '../../../core/services/device.service';
 import { Device, DeviceType, Visibility } from '../../../core/models/device.model';
+import { API_BASE_URL } from '../../../core/api.config';
 
 interface DiscoveredEntity {
   entity_id: string;
@@ -12,8 +13,6 @@ interface DiscoveredEntity {
   device_class: string | null;
   already_registered: boolean;
 }
-
-const API = 'http://localhost:8000/api/v1';
 
 const DC_MAP: Record<string, DeviceType> = {
   temperature: 'temperature',
@@ -164,7 +163,7 @@ export class AdminDevicesComponent implements OnInit {
   loadDiscover() {
     this.loadingDiscover = true;
     this.discoverError = '';
-    this.http.get<DiscoveredEntity[]>(`${API}/devices/discover`).subscribe({
+    this.http.get<DiscoveredEntity[]>(`${API_BASE_URL}/devices/discover`).subscribe({
       next: data => {
         this.discovered = data;
         this.loadingDiscover = false;
@@ -196,7 +195,7 @@ export class AdminDevicesComponent implements OnInit {
         visibility: 'public',
       }));
 
-    this.http.post(`${API}/devices/discover/import`, { entities }).subscribe({
+    this.http.post(`${API_BASE_URL}/devices/discover/import`, { entities }).subscribe({
       next: () => {
         this.selectedEntities.clear();
         this.loadDevices();

@@ -1,7 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-
-const API = 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from '../api.config';
 
 export interface Settings {
   telemetry_interval_seconds: number;
@@ -22,16 +21,16 @@ export class SettingsService {
   constructor(private http: HttpClient) {}
 
   getSettings() {
-    return this.http.get<Settings>(`${API}/settings`);
+    return this.http.get<Settings>(`${API_BASE_URL}/settings`);
   }
 
   updateSettings(settings: Partial<Settings>) {
-    return this.http.patch<Settings>(`${API}/settings`, settings);
+    return this.http.patch<Settings>(`${API_BASE_URL}/settings`, settings);
   }
 
   getTelemetryHistory(deviceId: number, limit: number = 100) {
     return this.http.get<TelemetryHistoryItem[]>(
-      `${API}/settings/telemetry/history/${deviceId}?limit=${limit}`
+      `${API_BASE_URL}/settings/telemetry/history/${deviceId}?limit=${limit}`
     );
   }
 
@@ -42,7 +41,7 @@ export class SettingsService {
     limit: number,
     offset: number = 0
   ) {
-    let url = `${API}/telemetry/history?limit=${limit}&offset=${offset}`;
+    let url = `${API_BASE_URL}/telemetry/history?limit=${limit}&offset=${offset}`;
     
     if (deviceId) {
       url += `&device_id=${deviceId}`;

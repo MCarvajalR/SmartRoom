@@ -1,12 +1,21 @@
-import { Component, OnInit, OnDestroy, inject, DestroyRef } from '@angular/core';
-import { DatePipe, NgClass, DecimalPipe} from '@angular/common';
-import { TelemetryService } from '../../core/services/telemetry.service';
-import { RealtimeService, RealtimeUpdate } from '../../core/services/realtime.service';
-import { AuthService } from '../../core/services/auth.service';
-import { TelemetryLatest } from '../../core/models/telemetry.model';
+import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
+import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { timer, EMPTY} from 'rxjs';
-import { exhaustMap, finalize, catchError, filter, timeout, retry, delay } from 'rxjs/operators';
+import { EMPTY, forkJoin, of, timer } from 'rxjs';
+import { catchError, exhaustMap, filter, finalize, retry, timeout } from 'rxjs/operators';
+import { AuthService } from '../../core/services/auth.service';
+import { DeviceService } from '../../core/services/device.service';
+import { RealtimeService, RealtimeUpdate } from '../../core/services/realtime.service';
+import { TelemetryService } from '../../core/services/telemetry.service';
+import { DevicesByArea } from '../../core/models/device.model';
+import { TelemetryLatest } from '../../core/models/telemetry.model';
+
+interface DashboardArea {
+  area_id: string;
+  area_name: string;
+  devices: TelemetryLatest[];
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -16,47 +25,78 @@ import { exhaustMap, finalize, catchError, filter, timeout, retry, delay } from 
   styleUrl: './dashboard.component.scss'
 })
 export class DashboardComponent implements OnInit, OnDestroy {
-  // --- Estado del Componente ---
-  //devices: TelemetryLatest[] = [];
   lastUpdate: Date | null = null;
-
-  // Declaración de la propiedad para rastrear actualizaciones
   recentlyUpdated = new Set<number>();
-
-  // --- Estados de Carga ---
   isInitialLoading = true;
   isRefreshing = false;
   loadError = false;
 
-  // --- Utilidades y Servicios ---
   private destroyRef = inject(DestroyRef);
   private unsubscribeWS!: () => void;
-  
-  // PROXY DE ESTADO: Vinculamos el componente con el Singleton del servicio
-    /*get devices() { return this.telemetry.devicesCache; }
-    set devices(value: TelemetryLatest[]) { this.telemetry.devicesCache = value; }*/
-    // Cambio con Signal
-    get devices(): TelemetryLatest[] { return this.telemetry.devicesCache(); }
-    set devices(value: TelemetryLatest[]) { this.telemetry.devicesCache.set(value); }
-  
-    constructor(
+  private areaCatalog: DevicesByArea[] = [];
+
+  get devices(): TelemetryLatest[] {
+    return this.telemetry.devicesCache();
+  }
+
+  set devices(value: TelemetryLatest[]) {
+    this.telemetry.devicesCache.set(value);
+  }
+
+  get areaGroups(): DashboardArea[] {
+    if (!this.devices.length) return [];
+
+    const devicesById = new Map(this.devices.map(device => [device.device_id, device]));
+    const usedDeviceIds = new Set<number>();
+    const groups: DashboardArea[] = [];
+
+    for (const area of this.areaCatalog) {
+      const areaDevices = area.devices
+        .map(device => device.id ? devicesById.get(device.id) : undefined)
+        .filter((device): device is TelemetryLatest => !!device);
+
+      if (!areaDevices.length) continue;
+
+      areaDevices.forEach(device => usedDeviceIds.add(device.device_id));
+      groups.push({
+        area_id: area.area_id,
+        area_name: area.area_name || area.area_id,
+        devices: areaDevices,
+      });
+    }
+
+    const unassigned = this.devices.filter(device => !usedDeviceIds.has(device.device_id));
+    if (unassigned.length) {
+      groups.push({
+        area_id: 'unassigned',
+        area_name: 'Sin área asignada',
+        devices: unassigned,
+      });
+    }
+
+    return groups;
+  }
+
+  get deviceCount() {
+    return this.devices.length;
+  }
+
+  get areaCount() {
+    return this.areaGroups.length;
+  }
+
+  constructor(
     public auth: AuthService,
     public realtime: RealtimeService,
-    private telemetry: TelemetryService
-  ) { }
+    private telemetry: TelemetryService,
+    private devicesService: DeviceService,
+    private router: Router
+  ) {}
 
   ngOnInit() {
-    // Conexión WS primero para recibir datos mientras carga la HTTP inicial
-    // WebSocket para actualizaciones en tiempo real
     this.realtime.connect();
-    this.unsubscribeWS = this.realtime.onUpdate((u) => this.applyUpdate(u));
-
-    // Carga inicial con reintentos automáticos
-    // Si falla, reintenta cada 3s hasta 5 veces antes de mostrar error
+    this.unsubscribeWS = this.realtime.onUpdate((update) => this.applyUpdate(update));
     this.loadInitial();
-
-    // Polling solo como respaldo cuando el WS está caído
-    // Intervalo largo (30s) porque el WS ya cubre el tiempo real
     this.startFallbackPolling();
   }
 
@@ -64,80 +104,68 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.isInitialLoading = true;
     this.loadError = false;
 
-    this.telemetry.getLatest().pipe(
-      timeout(8000), // Aumentamos el timeout por Tailscale
-      // Reintentos automáticos con delay
+    forkJoin({
+      latest: this.telemetry.getLatest(),
+      areas: this.devicesService.getGroupedByArea().pipe(catchError(() => of([]))),
+    }).pipe(
+      timeout(8000),
       retry({
         count: 5,
-        delay: (error, retryCount) => {
-          console.warn(`Error en carga inicial (intento ${retryCount}):`, error);
-          return timer(3000); // Espera 3s antes de reintentar
-        }
+        delay: () => timer(3000),
       }),
-
-      // Si se agotan los intentos, capturamos el error para mostrar mensaje al usuario
       catchError((err) => {
         console.error('Carga inicial fallida tras reintentos:', err);
         this.loadError = true;
-        this.isInitialLoading = false; // Detenemos el spinner de carga
-        return EMPTY; 
+        this.isInitialLoading = false;
+        return EMPTY;
       }),
       finalize(() => {
         this.isInitialLoading = false;
       })
-    ).subscribe(data => {
-      if (data) {
-        // Primera carga: asignación directa, no hay nada que preservar
-        this.devices = data;
-        this.lastUpdate = new Date();
-        this.loadError = false; // Aseguramos que el error se limpia si finalmente carga bien
-      }
+    ).subscribe(({ latest, areas }) => {
+      this.areaCatalog = areas ?? [];
+      this.devices = latest;
+      this.lastUpdate = new Date();
+      this.loadError = false;
     });
   }
 
   private startFallbackPolling() {
     timer(30000, 30000).pipe(
       takeUntilDestroyed(this.destroyRef),
-      // Actúa solo si el WS está caído
-      // Si el WS está connected, entonces el polling no hace nada
       filter(() => this.realtime.status() !== 'connected'),
       exhaustMap(() => {
         this.isRefreshing = true;
 
         return this.telemetry.getLatest().pipe(
-          timeout(8000), // Aumentamos un poco el margen por Tailscale
+          timeout(8000),
           catchError(() => EMPTY),
           finalize(() => {
-            this.isRefreshing = false; })
+            this.isRefreshing = false;
+          })
         );
       })
     ).subscribe(data => {
       if (data) {
-        // Merge inteligente: no reemplaza objetos que no cambiaron
         this.mergeDevices(data);
         this.lastUpdate = new Date();
       }
     });
   }
 
-  /**
-   * Actualiza solo los objetos que realmente cambiaron.
-   * Si el objeto tiene la misma referencia, Angular no toca el DOM → sin parpadeo.
-   */
   private mergeDevices(freshData: TelemetryLatest[]) {
     if (this.devices.length === 0) {
       this.devices = freshData;
       return;
     }
 
-    const freshMap = new Map(freshData.map(d => [d.device_id, d]));
+    const freshMap = new Map(freshData.map(device => [device.device_id, device]));
     let hasChanges = false;
 
     const merged = this.devices.map(existing => {
       const fresh = freshMap.get(existing.device_id);
-      if (!fresh) return existing; // No hay datos nuevos para este dispositivo
+      if (!fresh) return existing;
 
-      // Solo crea nuevo objeto si hay un cambio real de datos
       const changed =
         fresh.value !== existing.value ||
         fresh.raw_state !== existing.raw_state ||
@@ -148,52 +176,28 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return { ...existing, ...fresh };
       }
 
-      // Misma referencia, si Angular detecta que no hay cambios entonces no toca el DOM
       return existing;
     });
 
-    // Agregar dispositivos que aparecieron nuevos
-    freshData.forEach(f => {
-      if (!this.devices.find(d => d.device_id === f.device_id)) {
-        merged.push(f);
+    freshData.forEach(fresh => {
+      if (!this.devices.find(device => device.device_id === fresh.device_id)) {
+        merged.push(fresh);
         hasChanges = true;
       }
     });
 
-    // Solo reasignar el array si algo cambió de verdad
     if (hasChanges) this.devices = merged;
   }
 
-/*   manualRefresh() {
-    // Reutilizamos la misma lógica de seguridad
-    if (this.isRefreshing) return;
-    this.isRefreshing = true;
-    this.telemetry.getLatest().pipe(
-      timeout(6000),
-      catchError(() => EMPTY),
-      finalize(() => {
-        this.isRefreshing = false; })
-    ).subscribe(data => {
-      if (data) {
-        this.mergeDevices(data); // También usa merge, no reemplazo total
-        this.lastUpdate = new Date();
-      }
-    });
-  } */
-
-  /**
-   * Actualización desde WebSocket
-   */
   private applyUpdate(update: RealtimeUpdate) {
-    const idx = this.devices.findIndex(d => d.device_id === update.device_id);
+    const idx = this.devices.findIndex(device => device.device_id === update.device_id);
 
     if (idx !== -1) {
-      // Clonamos el objeto para asegurar que Angular vea el cambio
       const newDevices = [...this.devices];
       newDevices[idx] = { ...newDevices[idx], ...update };
       this.devices = newDevices;
     } else {
-      this.devices = [...this.devices, update as any];
+      this.devices = [...this.devices, update as TelemetryLatest];
     }
 
     this.lastUpdate = new Date();
@@ -201,15 +205,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     setTimeout(() => this.recentlyUpdated.delete(update.device_id), 1500);
   }
 
-  // Botón manual: útil en desarrollo, pero puede ocultarse en modo TV
   manualRefresh() {
     if (this.isRefreshing || this.isInitialLoading) return;
     this.isRefreshing = true;
+
     this.telemetry.getLatest().pipe(
       timeout(6000),
       catchError(() => EMPTY),
       finalize(() => {
-        this.isRefreshing = false; })
+        this.isRefreshing = false;
+      })
     ).subscribe(data => {
       if (data) {
         this.mergeDevices(data);
@@ -234,22 +239,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return switchTypes.includes(deviceType.toLowerCase());
   }
 
+  isAccessDevice(device: TelemetryLatest): boolean {
+    const entityId = device.entity_id.toLowerCase();
+    const deviceName = device.device_name.toLowerCase();
+    return device.device_type.toLowerCase() === 'lock' || entityId.includes('puerta') || deviceName.includes('puerta');
+  }
+
+  openAccess(device: TelemetryLatest) {
+    if (this.isAccessDevice(device)) {
+      this.router.navigate(['/access']);
+    }
+  }
+
   getDeviceIcon(deviceType: string, rawState: string): string {
     const type = deviceType.toLowerCase();
     const on = this.isOnState(rawState);
-    
-    if (type === 'input_boolean' || type === 'switch') {
-      return on ? 'fa-toggle-on' : 'fa-toggle-off';
-    }
-    if (type === 'lock') {
-      return on ? 'fa-lock-open' : 'fa-lock';
-    }
-    if (type === 'binary_sensor' || type === 'door' || type === 'window') {
-      return on ? 'fa-door-open' : 'fa-door-closed';
-    }
-    if (type === 'light') {
-      return on ? 'fa-lightbulb' : 'fa-lightbulb';
-    }
+
+    if (type === 'input_boolean' || type === 'switch') return on ? 'fa-toggle-on' : 'fa-toggle-off';
+    if (type === 'lock') return on ? 'fa-lock-open' : 'fa-lock';
+    if (type === 'binary_sensor' || type === 'door' || type === 'window') return on ? 'fa-door-open' : 'fa-door-closed';
+    if (type === 'temperature') return 'fa-temperature-half';
+    if (type === 'humidity') return 'fa-droplet';
+    if (type === 'sensor') return 'fa-gauge-high';
+    if (type === 'light') return 'fa-lightbulb';
     return 'fa-microchip';
   }
 

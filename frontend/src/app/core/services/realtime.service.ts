@@ -1,5 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { AuthService } from './auth.service';
+import { WS_TELEMETRY_URL } from '../api.config';
 
 export interface RealtimeUpdate {
   type:        'state_update';
@@ -13,8 +14,6 @@ export interface RealtimeUpdate {
   recorded_at: string | null;
   visibility:  'public' | 'docente' | 'admin';
 }
-
-const WS_URL = 'ws://localhost:8000/api/v1/ws/telemetry';
 
 @Injectable({ providedIn: 'root' })
 export class RealtimeService {
@@ -32,7 +31,7 @@ export class RealtimeService {
     if (this.ws?.readyState === WebSocket.OPEN) return;
 
     this.status.set('connecting');
-    this.ws = new WebSocket(WS_URL);
+    this.ws = new WebSocket(WS_TELEMETRY_URL);
 
     this.ws.onopen = () => {
       this.status.set('connected');

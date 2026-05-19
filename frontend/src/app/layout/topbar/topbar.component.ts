@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
-import { NgClass } from '@angular/common';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-topbar',
@@ -9,7 +9,6 @@ import { NgClass } from '@angular/common';
   imports: [RouterLink],
   template: `
     <header class="topbar">
-      <!-- Lado Izquierdo: Acciones Administrativas -->
       <div class="topbar-left">
         @if (auth.hasRole('admin')) {
           <a href="http://100.118.222.115:8123" target="_blank" class="btn-ha">
@@ -19,12 +18,21 @@ import { NgClass } from '@angular/common';
         }
       </div>
 
-      <!-- Lado Derecho: Usuario y Sesión -->
       <div class="topbar-right">
+        <button
+          class="theme-toggle"
+          type="button"
+          (click)="theme.toggle()"
+          [attr.aria-label]="theme.mode() === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'">
+          <i class="fa-solid" [class.fa-moon]="theme.mode() === 'dark'" [class.fa-sun]="theme.mode() !== 'dark'"></i>
+          <span>{{ theme.mode() === 'dark' ? 'Noche' : 'Día' }}</span>
+        </button>
+
         @if (auth.isLoggedIn()) {
-          <span class="role-badge role-{{ auth.role() }}">{{ auth.role() }}</span>
-          <span class="user-name">{{ auth.user()?.username ?? auth.role() }}</span>
-          <button class="btn-logout" (click)="auth.logout()">Salir</button>
+          <button class="profile-button" type="button">
+            <i class="fa-solid fa-user"></i>
+            <span>{{ auth.user()?.username ?? auth.role() }}</span>
+          </button>
         } @else {
           <a class="btn-login" routerLink="/login">Iniciar sesión</a>
         }
@@ -34,7 +42,7 @@ import { NgClass } from '@angular/common';
   styleUrl: './topbar.component.scss'
 })
 export class TopbarComponent implements OnInit {
-  constructor(public auth: AuthService) { }
+  constructor(public auth: AuthService, public theme: ThemeService) {}
 
   ngOnInit() {
     if (this.auth.isLoggedIn()) {

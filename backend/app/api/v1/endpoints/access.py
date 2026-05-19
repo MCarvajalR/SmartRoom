@@ -79,22 +79,11 @@ async def get_door_state(
     Raises:
         502: Si no se puede conectar a Home Assistant
     
-    Side Effects:
-        Registra la consulta en access_logs
     """
     door_id = await get_door_entity_id()
     state_data = await get_state(door_id)
     if not state_data:
         raise HTTPException(status_code=502, detail="No se pudo conectar con Home Assistant")
-
-    # Registrar consulta en logs
-    log = AccessLog(
-        entity_id=door_id,
-        action="query",
-        triggered_by=current_user.username,
-    )
-    db.add(log)
-    await db.commit()
 
     attrs = state_data.get("attributes", {})
     ha_state = state_data.get("state", "unknown")
@@ -193,6 +182,10 @@ async def get_logs(
         Lista de AccessLogResponse ordenados por fecha descendente
     """
     result = await db.execute(
-        select(AccessLog).order_by(desc(AccessLog.triggered_at)).limit(limit)
+        select(AccessLog)
+        .where(AccessLog.action.in_(("lock", "unlock")))
+        .where(AccessLog.triggered_by != "homeassistant")
+        .order_by(desc(AccessLog.triggered_at))
+        .limit(limit)
     )
     return result.scalars().all()

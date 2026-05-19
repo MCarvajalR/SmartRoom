@@ -3,8 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
 import { LoginRequest, TokenResponse, User, UserCreate, UserRole } from '../models/user.model';
-
-const API = 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from '../api.config';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -33,7 +32,7 @@ export class AuthService {
 }
 
   login(creds: LoginRequest) {
-    return this.http.post<TokenResponse>(`${API}/auth/login`, creds).pipe(
+    return this.http.post<TokenResponse>(`${API_BASE_URL}/auth/login`, creds).pipe(
       tap(res => {
         localStorage.setItem('token', res.access_token);
         localStorage.setItem('role', res.role);
@@ -44,17 +43,17 @@ export class AuthService {
   }
 
   loadProfile() {
-    return this.http.get<User>(`${API}/auth/me`).pipe(
+    return this.http.get<User>(`${API_BASE_URL}/auth/me`).pipe(
       tap(user => this._user.set(user))
     );
   }
 
   getUsers() {
-    return this.http.get<User[]>(`${API}/auth/users`);
+    return this.http.get<User[]>(`${API_BASE_URL}/auth/users`);
   }
 
   createUser(data: UserCreate) {
-    return this.http.post<User>(`${API}/auth/users`, data);
+    return this.http.post<User>(`${API_BASE_URL}/auth/users`, data);
   }
 
   logout() {

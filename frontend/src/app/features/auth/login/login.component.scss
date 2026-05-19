@@ -2,33 +2,80 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   min-height: 100vh;
-  // Degradado radial para dar profundidad
-  background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+  background:
+    radial-gradient(circle at 50% 52%, rgba(45, 212, 191, 0.12), transparent 32rem),
+    linear-gradient(145deg, #101827 0%, #0b1220 45%, #101624 100%);
   padding: var(--space-4);
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -20%;
+    pointer-events: none;
+  }
+
+  &::before {
+    z-index: -2;
+    background:
+      linear-gradient(rgba(45, 212, 191, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(45, 212, 191, 0.08) 1px, transparent 1px),
+      linear-gradient(135deg, transparent 0 48%, rgba(96, 165, 250, 0.12) 49% 50%, transparent 51% 100%);
+    background-size: 72px 72px, 72px 72px, 180px 180px;
+    mask-image: radial-gradient(circle at center, black 0 48%, transparent 74%);
+    animation: smartroomGridDrift 24s linear infinite;
+  }
+
+  &::after {
+    z-index: -1;
+    background:
+      linear-gradient(110deg, transparent 0 35%, rgba(45, 212, 191, 0.18) 36%, transparent 38% 100%),
+      linear-gradient(255deg, transparent 0 48%, rgba(96, 165, 250, 0.12) 49%, transparent 51% 100%),
+      repeating-linear-gradient(90deg, transparent 0 86px, rgba(45, 212, 191, 0.06) 87px 88px, transparent 89px 172px);
+    opacity: 0.82;
+    animation: smartroomSignalSweep 15s ease-in-out infinite alternate;
+  }
 }
 
 .login-card {
-  background: #1e293b; // Un gris azulado profundo en lugar de negro puro
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  padding: 40px;
+  position: relative;
   width: 100%;
   max-width: 420px;
+  padding: 40px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 24px;
+  background: rgba(30, 41, 59, 0.9);
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(16px);
+  animation: loginCardIn 520ms ease-out both;
 
-  h1 { 
-    font-size: 2rem; 
+  h1 {
+    margin-bottom: 8px;
+    color: #ffffff;
+    font-size: 2rem;
     font-weight: 700;
-    color: #ffffff; // Contraste máximo
-    margin-bottom: 8px; 
-    letter-spacing: -0.025em;
+    letter-spacing: 0;
+    text-align: center;
   }
 
-  .sub { 
-    color: #94a3b8; // Gris azulado legible
-    font-size: 0.95rem; 
-    margin-bottom: 32px; 
+  .sub {
+    max-width: none;
+    margin-bottom: 32px;
+    color: #94a3b8;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+}
+
+.login-wrap.leaving {
+  animation: loginSceneOut 340ms ease-in both;
+
+  .login-card {
+    animation: loginCardOut 340ms ease-in both;
   }
 }
 
@@ -37,53 +84,118 @@
 
   label {
     display: block;
+    margin-bottom: 8px;
+    color: #cbd5e1;
     font-size: 0.85rem;
     font-weight: 600;
-    text-transform: uppercase; // Estilo más "Pro"
     letter-spacing: 0.05em;
-    color: #cbd5e1; // Color claro para legibilidad
-    margin-bottom: 8px;
+    text-transform: uppercase;
   }
 
   input {
     width: 100%;
     padding: 12px 16px;
-    background: #0f172a; // Fondo más oscuro para el input (efecto de profundidad)
     border: 2px solid #334155;
     border-radius: 12px;
-    font-size: 1rem;
-    color: #ffffff;
-    transition: all 0.2s ease;
     outline: none;
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 1rem;
+    transition: all 0.2s ease;
 
-    &:focus { 
-      border-color: #2dd4bf; // Color teal de tu gráfica de avances
+    &:focus {
+      border-color: #2dd4bf;
       box-shadow: 0 0 0 4px rgba(45, 212, 191, 0.15);
     }
 
-    &::placeholder { color: #475569; }
+    &::placeholder {
+      color: #475569;
+    }
+  }
+}
+
+.password-control {
+  position: relative;
+
+  input {
+    padding-right: 54px;
+  }
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 40px;
+  height: 40px;
+  transform: translateY(-50%);
+  border-radius: 10px;
+  color: #94a3b8;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+  }
+
+  &::before {
+    width: 21px;
+    height: 13px;
+    border: 2px solid currentColor;
+    border-radius: 999px;
+    transform: translate(-50%, -50%) rotate(-8deg);
+  }
+
+  &::after {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    transform: translate(-50%, -50%);
+  }
+
+  &:hover,
+  &[aria-pressed="true"] {
+    background: rgba(45, 212, 191, 0.12);
+    color: #5eead4;
+  }
+
+  &:active {
+    transform: translateY(-50%) scale(0.96);
   }
 }
 
 .btn-submit {
   width: 100%;
   padding: 14px;
-  background: #2dd4bf; // Teal brillante para el CTA principal
-  color: #0f172a; // Texto oscuro sobre fondo claro para contraste perfecto
   border: none;
   border-radius: 12px;
+  background: #2dd4bf;
+  color: #0f172a;
+  cursor: pointer;
   font-size: 1rem;
   font-weight: 700;
-  cursor: pointer;
-  transition: all 0.3s transform;
+  transition:
+    background 0.3s ease,
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
 
-  &:hover:not(:disabled) { 
+  &:hover:not(:disabled) {
     background: #5eead4;
-    transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgba(45, 212, 191, 0.4);
+    transform: translateY(-2px);
   }
 
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
 }
 
 .guest-link {
@@ -94,18 +206,85 @@
 
   a {
     color: #2dd4bf;
-    text-decoration: none;
-    font-weight: 600;
     font-size: 0.95rem;
+    font-weight: 600;
+    text-decoration: none;
     transition: color 0.2s;
 
-    &:hover { color: #5eead4; text-decoration: underline; }
+    &:hover {
+      color: #5eead4;
+      text-decoration: underline;
+    }
   }
 
   span {
     display: block;
-    font-size: 0.8rem;
-    color: #64748b;
     margin-top: 8px;
+    color: #64748b;
+    font-size: 0.8rem;
+  }
+}
+
+@keyframes smartroomGridDrift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+
+  to {
+    transform: translate3d(-72px, -72px, 0) rotate(1deg);
+  }
+}
+
+@keyframes smartroomSignalSweep {
+  from {
+    opacity: 0.5;
+    transform: translate3d(-5%, -3%, 0);
+  }
+
+  to {
+    opacity: 0.88;
+    transform: translate3d(5%, 3%, 0);
+  }
+}
+
+@keyframes loginCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes loginSceneOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes loginCardOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-wrap::before,
+  .login-wrap::after,
+  .login-card {
+    animation: none;
   }
 }

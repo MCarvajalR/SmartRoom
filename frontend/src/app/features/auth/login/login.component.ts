@@ -7,9 +7,8 @@ import { AuthService } from '../../../core/services/auth.service';
   selector: 'app-login',
   standalone: true,
   imports: [ReactiveFormsModule],
-  // En el decorador @Component, actualiza el template:
-template: `
-    <div class="login-wrap">
+  template: `
+    <div class="login-wrap" [class.leaving]="isLeaving">
       <div class="login-card">
         <h1>Iniciar sesión</h1>
         <p class="sub">Gestión de Laboratorio Inteligente</p>
@@ -17,24 +16,39 @@ template: `
         <form [formGroup]="form" (ngSubmit)="submit()">
           <div class="field">
             <label for="username">Usuario</label>
-            <input 
-              id="username" 
-              type="text" 
-              formControlName="username" 
+            <input
+              id="username"
+              type="text"
+              formControlName="username"
               placeholder="Ej. admin"
               autocomplete="username" />
           </div>
+
           <div class="field">
             <label for="password">Contraseña</label>
-            <input 
-              id="password" 
-              type="password" 
-              formControlName="password" 
-              placeholder="••••••••"
-              autocomplete="current-password" />
+            <div class="password-control">
+              <input
+                id="password"
+                [type]="passwordVisible ? 'text' : 'password'"
+                formControlName="password"
+                placeholder="••••••••"
+                autocomplete="current-password" />
+              <button
+                class="password-toggle"
+                type="button"
+                aria-label="Mostrar contraseña mientras se mantiene pulsado"
+                [attr.aria-pressed]="passwordVisible"
+                (pointerdown)="showPassword($event)"
+                (pointerup)="hidePassword()"
+                (pointercancel)="hidePassword()"
+                (pointerleave)="hidePassword()"
+                (blur)="hidePassword()">
+              </button>
+            </div>
           </div>
 
-          <div style="min-height: 24px;"> @if (error) {
+          <div style="min-height: 24px;">
+            @if (error) {
               <p class="error-msg" style="color: #fb7185; font-size: 0.85rem; margin-bottom: 16px;">
                 <i class="fas fa-exclamation-circle"></i> {{ error }}
               </p>
@@ -62,7 +76,9 @@ export class LoginComponent {
   });
 
   loading = false;
-  error   = '';
+  error = '';
+  passwordVisible = false;
+  isLeaving = false;
 
   constructor(
     private fb: FormBuilder,
@@ -74,19 +90,35 @@ export class LoginComponent {
     if (this.form.invalid) return;
 
     this.loading = true;
-    this.error   = '';
+    this.error = '';
 
     const { username, password } = this.form.value;
     this.auth.login({ username: username!, password: password! }).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
+      next: () => this.enterDashboard(),
       error: () => {
-        this.error   = 'Credenciales incorrectas';
+        this.error = 'Credenciales incorrectas';
         this.loading = false;
       }
     });
   }
 
+  showPassword(event: PointerEvent) {
+    event.preventDefault();
+    this.passwordVisible = true;
+  }
+
+  hidePassword() {
+    this.passwordVisible = false;
+  }
+
   goAsGuest() {
-    this.router.navigate(['/dashboard']);
+    this.enterDashboard();
+  }
+
+  private enterDashboard() {
+    this.isLeaving = true;
+    window.setTimeout(() => {
+      this.router.navigate(['/dashboard']);
+    }, 340);
   }
 }

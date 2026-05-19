@@ -65,13 +65,13 @@
   flex-direction: column;
   padding: 40px;
   min-height: 100vh;
-  background: #0f172a;
-  color: var(--text-primary); // <-- FORZAMOS que las letras sean OSCURAS
+  background: var(--color-bg);
+  color: var(--color-text);
   font-family: 'Inter', sans-serif;
   
   // Esto asegura que cualquier texto dentro sea visible
   h1, h2, h3, p, span, td, th {
-    color: var(--text-primary);
+    color: var(--color-text);
   }
   /* ESTADO ESPECIAL PARA EL LOGIN */
   &.login-mode {
@@ -98,8 +98,35 @@
 
 .app-content {
   flex-grow: 1;           // Hace que el dashboard ocupe todo el espacio restante a la derecha
-  background-color: #f4f7f6;
+  background-color: var(--color-bg);
   overflow-y: auto;       // Si el dashboard es muy largo, solo esta parte tendrá scroll
+}
+
+.route-frame {
+  display: block;
+  min-height: 0;
+}
+
+.route-frame.fade-route > :not(router-outlet) {
+  animation: routeFadeIn 360ms ease-out both;
+}
+
+@keyframes routeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-frame.fade-route > :not(router-outlet) {
+    animation: none;
+  }
 }
 
 // Ajuste para separar Sidebar de Contenido

@@ -5,8 +5,7 @@ import { SettingsService, TelemetryHistoryItem } from '../../../core/services/se
 import { DeviceService } from '../../../core/services/device.service';
 import { Device } from '../../../core/models/device.model';
 import { HttpClient } from '@angular/common/http';
-
-const API = 'http://localhost:8000/api/v1';
+import { API_BASE_URL } from '../../../core/api.config';
 
 @Component({
   selector: 'app-telemetry-history',
@@ -116,7 +115,7 @@ export class TelemetryHistoryComponent implements OnInit {
   loadHistory() {
     this.loading = true;
     
-    let url = `${API}/telemetry/history?limit=${this.limit}`;
+    let url = `${API_BASE_URL}/telemetry/history?limit=${this.limit}`;
     
     if (this.selectedDeviceId) {
       url += `&device_id=${this.selectedDeviceId}`;

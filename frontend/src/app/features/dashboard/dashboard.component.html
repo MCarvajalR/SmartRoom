@@ -1,72 +1,120 @@
 <div class="dashboard">
-    <div class="page-header">
-        <div class="header-left">
-            <h2>Panel de Monitoreo</h2>
-            <span class="rt-badge" [ngClass]="'rt-' + realtime.status()">
-                <span class="rt-dot"></span>
-                {{ rtLabel() }}
-            </span>
-        </div>
-
-        <div class="header-actions">
-        <!-- 
-            El botón se oculta cuando el WS está conectado.
-            Justificación: en modo TV no hay usuario. Si el WS funciona,
-            el botón es ruido visual innecesario. Solo aparece como fallback
-            cuando hay desconexión.
-        -->
-        @if (realtime.status() !== 'connected') {
-            <button class="btn-refresh" (click)="manualRefresh()" [disabled]="isRefreshing">
-            <i class="fas fa-sync-alt" [class.fa-spin]="isRefreshing"></i>
-            <span>{{ isRefreshing ? 'Actualizando...' : 'Refrescar' }}</span>
-            </button>
-        }
-        <span class="last-update">
-            @if (lastUpdate) { Última actualización: {{ lastUpdate | date:'HH:mm:ss' }} }
-        </span>
-        </div>
+  <div class="page-header">
+    <div class="dashboard-heading">
+      <h2>Panel de Monitoreo</h2>
+      <span class="rt-badge" [ngClass]="'rt-' + realtime.status()">
+        <span class="rt-dot"></span>
+        {{ rtLabel() }}
+      </span>
+      <span class="last-update">
+        @if (lastUpdate) { Última actualización: {{ lastUpdate | date:'HH:mm:ss' }} }
+      </span>
     </div>
 
-    <div class="metrics-grid">
-        @if (isInitialLoading && devices.length === 0) {
-            @for (i of [1,2,3]; track i) {
-                <div class="metric-card skeleton"></div>
-            }
-        }
+    @if (realtime.status() !== 'connected') {
+      <button class="btn-refresh" (click)="manualRefresh()" [disabled]="isRefreshing">
+        <i class="fas fa-sync-alt" [class.fa-spin]="isRefreshing"></i>
+        <span>{{ isRefreshing ? 'Actualizando...' : 'Refrescar' }}</span>
+      </button>
+    }
 
-        <!-- Error visible: si falló tras todos los reintentos -->
-        @if (loadError && !isInitialLoading && devices.length === 0) {
-        <div class="load-error">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>No se pudo conectar al servidor.</p>
-            <button class="btn-refresh" (click)="loadInitial()">Reintentar</button>
-        </div>
-        }
+  </div>
 
-        @for (d of devices; track d.device_id) {
-            <div class="metric-card" [ngClass]="['type-' + d.device_type, isOnState(d.raw_state) ? 'state-on' : 'state-off']"
-                [class.updated]="recentlyUpdated.has(d.device_id)">
-                <div class="card-header">
-                    <span class="device-name">{{ d.device_name }}</span>
-                    <i class="fas" [ngClass]="getDeviceIcon(d.device_type, d.raw_state)"></i>
-                </div>
-                <div class="card-body">
-                    @if (isSwitchDevice(d.device_type)) {
-                    <div class="status-badge">
-                        <span class="status-text">{{ isOnState(d.raw_state) ? 'ABIERTA' : 'CERRADA' }}</span>
-                    </div>
-                    } @else {
-                    <div class="numeric-value">
-                        <span class="value-num">{{ d.value | number:'1.1-1' }}</span>
-                        <span class="value-unit">{{ d.unit ?? '' }}</span>
-                    </div>
-                    }
-                </div>
-                <div class="card-footer">
-                    <span class="entity-id" [title]="d.entity_id">{{ d.entity_id }}</span>
-                    <span class="record-time">{{ d.recorded_at | date:'HH:mm:ss' }}</span>
-                </div>
+  <div class="summary-strip">
+    <div class="summary-item">
+      <span class="summary-value">{{ deviceCount }}</span>
+      <span class="summary-label">Dispositivos</span>
+    </div>
+    <div class="summary-item">
+      <span class="summary-value">{{ areaCount }}</span>
+      <span class="summary-label">Áreas</span>
+    </div>
+  </div>
+
+  <div class="areas-title">
+    <span>Áreas monitoreadas</span>
+  </div>
+
+  @if (isInitialLoading && devices.length === 0) {
+    <div class="areas-grid">
+      @for (i of [1,2,3]; track i) {
+        <section class="area-panel skeleton-panel">
+          <div class="area-header">
+            <div>
+              <span class="area-eyebrow">Área</span>
+              <h3>Cargando</h3>
             </div>
-        }
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-card skeleton"></div>
+            <div class="metric-card skeleton"></div>
+          </div>
+        </section>
+      }
     </div>
+  }
+
+  @if (loadError && !isInitialLoading && devices.length === 0) {
+    <div class="load-error">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>No se pudo conectar al servidor.</p>
+      <button class="btn-refresh inline" (click)="loadInitial()">Reintentar</button>
+    </div>
+  }
+
+  <div class="areas-grid">
+    @for (area of areaGroups; track area.area_id) {
+      <section class="area-panel">
+        <div class="area-header">
+          <div>
+            <span class="area-eyebrow">Área</span>
+            <h3>{{ area.area_name }}</h3>
+          </div>
+          <span class="area-count">{{ area.devices.length }}</span>
+        </div>
+
+        <div class="metrics-grid">
+          @for (d of area.devices; track d.device_id) {
+            <div
+              class="metric-card"
+              [ngClass]="['type-' + d.device_type, isOnState(d.raw_state) ? 'state-on' : 'state-off']"
+              [class.updated]="recentlyUpdated.has(d.device_id)"
+              [class.access-card]="isAccessDevice(d)"
+              [attr.role]="isAccessDevice(d) ? 'button' : null"
+              [attr.tabindex]="isAccessDevice(d) ? 0 : null"
+              [attr.aria-label]="isAccessDevice(d) ? 'Ir a control de acceso' : null"
+              (click)="openAccess(d)"
+              (keydown.enter)="openAccess(d)"
+              (keydown.space)="openAccess(d)">
+              <div class="card-header">
+                <span class="device-name">{{ d.device_name }}</span>
+                <i class="fas" [ngClass]="getDeviceIcon(d.device_type, d.raw_state)"></i>
+              </div>
+
+              <div class="card-body">
+                @if (isSwitchDevice(d.device_type)) {
+                  <div class="status-badge">
+                    <span class="status-text">{{ isOnState(d.raw_state) ? 'ABIERTA' : 'CERRADA' }}</span>
+                  </div>
+                } @else {
+                  <div class="numeric-value">
+                    <span class="value-num">{{ d.value | number:'1.1-1' }}</span>
+                    <span class="value-unit">{{ d.unit ?? '' }}</span>
+                  </div>
+                }
+              </div>
+
+              <div class="card-footer">
+                <span class="entity-id" [title]="d.entity_id">{{ d.entity_id }}</span>
+                @if (isAccessDevice(d)) {
+                  <span class="access-hint">Ver acceso</span>
+                }
+                <span class="record-time">{{ d.recorded_at | date:'HH:mm:ss' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+    }
+  </div>
 </div>
