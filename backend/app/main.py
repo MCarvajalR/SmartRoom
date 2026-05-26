@@ -148,8 +148,8 @@ app = FastAPI(
 # Configurar CORS para permitir requests desde el frontend Angular
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200"],
-    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1|100\.\d+\.\d+\.\d+|[a-zA-Z0-9-]+\.ts\.net)(:\d+)?$",
+    allow_origins=["*"],  # Para un entorno de laboratorio controlado, esto es lo más eficiente
+    allow_origin_regex=r"^http://(localhost|127\.0\.0\.1|100\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|[a-zA-Z0-9-]+\.ts\.net)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
