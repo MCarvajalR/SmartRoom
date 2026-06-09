@@ -12,6 +12,21 @@ services:
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
       - /dev/ttyUSB1:/dev/ttyUSB1
+
+  zwave-js:
+    image: zwavejs/zwave-js-ui:latest
+    container_name: zwave-js
+    restart: unless-stopped
+    ports:
+      - "8091:8091"
+    devices:
+      - /dev/ttyUSB1:/dev/ttyUSB1
+    volumes:
+      - ./zwave-js/data:/usr/src/app/store
+    environment:
+      - SESSION_SECRET=smartroom_zwave_secret
+      - ZWAVEJS_EXTERNAL_CONFIG=/usr/src/app/store/.config-db
+      - PORT=8091
   db:
     image: postgres:16-alpine
     container_name: smartroom_db_prod
