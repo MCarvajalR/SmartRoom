@@ -24,6 +24,7 @@ services:
     volumes:
       - ./zwave-js/data:/usr/src/app/store
     environment:
+      - ZWAVEJS_DEVICE=/dev/ttyUSB1
       - SESSION_SECRET=smartroom_zwave_secret
       - ZWAVEJS_EXTERNAL_CONFIG=/usr/src/app/store/.config-db
       - PORT=8091
