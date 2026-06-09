@@ -1,4 +1,14 @@
 services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    volumes:
+      - ./homeassistant/config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /dev/serial/by-id:/dev/serial/by-id
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
   db:
     image: postgres:16-alpine
     container_name: smartroom_db_prod
