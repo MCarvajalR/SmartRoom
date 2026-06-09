@@ -11,7 +11,7 @@ import { ThemeService } from '../../core/services/theme.service';
     <header class="topbar">
       <div class="topbar-left">
         @if (auth.hasRole('admin')) {
-          <a href="http://100.118.222.115:8123" target="_blank" class="btn-ha">
+          <a href="http://192.168.211.55:8123" target="_blank" class="btn-ha">
             <i class="fa-solid fa-house-signal"></i>
             <span>Abrir Home Assistant</span>
           </a>
