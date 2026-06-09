@@ -2,6 +2,7 @@ import { Component, HostListener, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
+import { SettingsService } from '../../core/services/settings.service';
 
 @Component({
   selector: 'app-topbar',
@@ -11,7 +12,7 @@ import { ThemeService } from '../../core/services/theme.service';
     <header class="topbar">
       <div class="topbar-left">
         @if (auth.hasRole('admin')) {
-          <a href="http://192.168.211.55:8123" target="_blank" class="btn-ha">
+          <a [href]="haUrl" target="_blank" class="btn-ha">
             <i class="fa-solid fa-house-signal"></i>
             <span>Abrir Home Assistant</span>
           </a>
@@ -77,16 +78,23 @@ import { ThemeService } from '../../core/services/theme.service';
 })
 export class TopbarComponent implements OnInit {
   menuOpen = false;
+  haUrl = 'http://192.168.211.55:8123';
 
   constructor(
     public auth: AuthService,
     public theme: ThemeService,
+    private settingsService: SettingsService,
   ) {}
 
   ngOnInit() {
     if (this.auth.isLoggedIn()) {
       this.auth.loadProfile().subscribe();
     }
+    this.settingsService.getSettings().subscribe({
+      next: (s) => {
+        if (s.ha_public_url) this.haUrl = s.ha_public_url;
+      },
+    });
   }
 
   toggleMenu() {

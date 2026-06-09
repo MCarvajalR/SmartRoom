@@ -5,6 +5,7 @@ import { API_BASE_URL } from '../api.config';
 export interface Settings {
   telemetry_interval_seconds: number;
   door_entity_id: string | null;
+  ha_public_url: string | null;
 }
 
 export interface TelemetryHistoryItem {

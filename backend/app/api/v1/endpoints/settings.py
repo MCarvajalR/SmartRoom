@@ -26,6 +26,8 @@ from app.models.telemetry import TelemetryRecord
 from app.models.user import User
 from app.services.scheduler import scheduler
 
+from app.core.config import settings as app_settings
+
 router = APIRouter(prefix="/settings", tags=["Configuración"])
 
 
@@ -39,6 +41,8 @@ class SettingsResponse(BaseModel):
     """
     telemetry_interval_seconds: int
     door_entity_id: str | None = None
+
+    ha_public_url: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -98,10 +102,15 @@ async def get_settings(
         
         logger.info(f"Settings query result: {settings}")
     
-        # Si existe, retornarla
+        # Si existe, retornarla con la URL pública de HA
         if settings:
             logger.info(f"Returning existing settings: {settings.telemetry_interval_seconds}, {settings.door_entity_id}")
-            return settings
+            result = {
+                "telemetry_interval_seconds": settings.telemetry_interval_seconds,
+                "door_entity_id": settings.door_entity_id,
+                "ha_public_url": app_settings.HA_PUBLIC_URL,
+            }
+            return result
         
         # Crear configuración por defecto si no existe
         settings = Settings(
@@ -114,7 +123,11 @@ async def get_settings(
         await db.commit()
         await db.refresh(settings)
         
-        return settings
+        return {
+            "telemetry_interval_seconds": settings.telemetry_interval_seconds,
+            "door_entity_id": settings.door_entity_id,
+            "ha_public_url": app_settings.HA_PUBLIC_URL,
+        }
     except Exception as e:
         logger.error(f"Error getting settings: {e}")
         raise HTTPException(status_code=500, detail=f"Error al obtener configuración: {str(e)}")
@@ -160,25 +173,30 @@ async def update_settings(
     await db.refresh(settings)
 
     # Actualizar scheduler si cambió el intervalo
-    try:
-        if scheduler.running:
-            try:
-                scheduler.remove_job("collect_telemetry")
-            except Exception:
-                pass
-            from app.services import telemetry_service
-            scheduler.add_job(
-                telemetry_service.collect_all,
-                "interval",
-                seconds=payload.telemetry_interval_seconds,
-                id="collect_telemetry",
-                replace_existing=True,
-            )
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning(f"No se pudo actualizar el scheduler: {e}")
+    if payload.telemetry_interval_seconds is not None:
+        try:
+            if scheduler.running:
+                try:
+                    scheduler.remove_job("collect_telemetry")
+                except Exception:
+                    pass
+                from app.services import telemetry_service
+                scheduler.add_job(
+                    telemetry_service.collect_all,
+                    "interval",
+                    seconds=payload.telemetry_interval_seconds,
+                    id="collect_telemetry",
+                    replace_existing=True,
+                )
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"No se pudo actualizar el scheduler: {e}")
 
-    return settings
+    return {
+        "telemetry_interval_seconds": settings.telemetry_interval_seconds,
+        "door_entity_id": settings.door_entity_id,
+        "ha_public_url": app_settings.HA_PUBLIC_URL,
+    }
 
 
 @router.get("/telemetry/history/{device_id}", response_model=List[TelemetryHistoryResponse])

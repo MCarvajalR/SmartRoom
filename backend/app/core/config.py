@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     
     # Home Assistant
     HA_URL: str = "http://localhost:8123"
+    HA_PUBLIC_URL: str = "http://localhost:8123"
     HA_TOKEN: str = ""  # Long-Lived Access Token de HA
     
     # Telemetría

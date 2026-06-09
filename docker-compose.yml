@@ -43,6 +43,7 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/smartroom_db
       HA_URL: ${HA_URL}
+      HA_PUBLIC_URL: ${HA_PUBLIC_URL}
       HA_TOKEN: ${HA_TOKEN}
       # ─── Variables inyectadas ───
       JWT_SECRET_KEY: ${JWT_SECRET_KEY}
