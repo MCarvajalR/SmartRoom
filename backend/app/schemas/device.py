@@ -6,8 +6,28 @@ de datos de dispositivos en la API REST.
 """
 
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+DeviceType = Literal[
+    "temperature",
+    "humidity",
+    "power",
+    "energy",
+    "plug",
+    "lock",
+    "light",
+    "sensor",
+    "binary_sensor",
+    "input_boolean",
+    "switch",
+    "device_tracker",
+    "climate",
+    "cover",
+    "other",
+]
+Visibility = Literal["public", "docente", "admin"]
 
 
 class DeviceCreate(BaseModel):
@@ -23,11 +43,11 @@ class DeviceCreate(BaseModel):
         visibility: Nivel de visibilidad (default: "public")
     """
     entity_id: str
-    name: str
-    device_type: str = "other"
-    unit: str | None = None
+    name: str = Field(min_length=2, max_length=80)
+    device_type: DeviceType = "other"
+    unit: str | None = Field(default=None, max_length=20)
     area_id: str | None = None
-    visibility: str = "public"
+    visibility: Visibility = "public"
 
 
 class DeviceUpdate(BaseModel):
@@ -44,12 +64,12 @@ class DeviceUpdate(BaseModel):
         is_active: Estado activo/inactivo
         visibility: Nuevo nivel de visibilidad
     """
-    name: str | None = None
-    device_type: str | None = None
-    unit: str | None = None
+    name: str | None = Field(default=None, min_length=2, max_length=80)
+    device_type: DeviceType | None = None
+    unit: str | None = Field(default=None, max_length=20)
     area_id: str | None = None
     is_active: bool | None = None
-    visibility: str | None = None
+    visibility: Visibility | None = None
 
 
 class DeviceResponse(BaseModel):

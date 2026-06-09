@@ -118,6 +118,27 @@ async def discover_ha_entities(db: AsyncSession = Depends(get_db)):
             continue
 
         attrs = s.get("attributes", {})
+
+        if eid.startswith("weather."):
+            for attribute, sensor_meta in ha_client.WEATHER_ATTRIBUTE_SENSORS.items():
+                raw_value = attrs.get(attribute)
+                if raw_value is None:
+                    continue
+
+                virtual_entity_id = ha_client.build_attribute_entity_id(eid, attribute)
+                discovered.append(
+                    DiscoveredEntity(
+                        entity_id=virtual_entity_id,
+                        friendly_name=f"{attrs.get('friendly_name', eid)} - {sensor_meta['label']}",
+                        state=str(raw_value),
+                        unit=attrs.get(f"{attribute}_unit") or sensor_meta["unit"],
+                        device_class=sensor_meta["device_type"],
+                        area_id=entity_area_map.get(eid),
+                        already_registered=virtual_entity_id in registered,
+                    )
+                )
+            continue
+
         discovered.append(
             DiscoveredEntity(
                 entity_id=eid,

@@ -33,12 +33,13 @@ RELEVANT_PREFIXES = (
     "light.",
     "climate.",
     "cover.",
+    "weather.",
 )
 
 # Prefijos de dominios a excluir del monitoreo
 # Se excluyen personas, zonas, clima, TTS, etc.
 EXCLUDED_PREFIXES = (
-    "person.", "zone.", "sun.", "weather.", "tts.",
+    "person.", "zone.", "sun.", "tts.",
     "todo.", "conversation.", "event.", "sensor.backup_",
     "sensor.sun_", "update.", "sensor.sensors",
 )
@@ -55,6 +56,36 @@ TYPE_MAP = {
     "motion": "binary_sensor",
 }
 
+VIRTUAL_ATTRIBUTE_SEPARATOR = "::attr::"
+
+WEATHER_ATTRIBUTE_SENSORS = {
+    "temperature": {
+        "device_type": "temperature",
+        "unit": "°C",
+        "label": "Temperatura exterior",
+    },
+    "humidity": {
+        "device_type": "humidity",
+        "unit": "%",
+        "label": "Humedad exterior",
+    },
+}
+
+
+def build_attribute_entity_id(entity_id: str, attribute: str) -> str:
+    return f"{entity_id}{VIRTUAL_ATTRIBUTE_SEPARATOR}{attribute}"
+
+
+def parse_attribute_entity_id(entity_id: str) -> tuple[str, str] | None:
+    if VIRTUAL_ATTRIBUTE_SEPARATOR not in entity_id:
+        return None
+
+    base_entity_id, attribute = entity_id.split(VIRTUAL_ATTRIBUTE_SEPARATOR, 1)
+    if not base_entity_id or not attribute:
+        return None
+
+    return base_entity_id, attribute
+
 
 def _headers() -> dict:
     return {
@@ -64,6 +95,32 @@ def _headers() -> dict:
 
 
 async def get_state(entity_id: str) -> dict | None:
+    virtual_attribute = parse_attribute_entity_id(entity_id)
+    if virtual_attribute:
+        base_entity_id, attribute = virtual_attribute
+        base_state = await get_state(base_entity_id)
+        if not base_state:
+            return None
+
+        attrs = base_state.get("attributes", {})
+        raw_value = attrs.get(attribute)
+        if raw_value is None:
+            return None
+
+        sensor_meta = WEATHER_ATTRIBUTE_SENSORS.get(attribute, {})
+        friendly_name = attrs.get("friendly_name", base_entity_id)
+        return {
+            "entity_id": entity_id,
+            "state": str(raw_value),
+            "attributes": {
+                "friendly_name": f"{friendly_name} - {sensor_meta.get('label', attribute)}",
+                "unit_of_measurement": sensor_meta.get("unit"),
+                "device_class": sensor_meta.get("device_type"),
+                "source_entity_id": base_entity_id,
+                "source_attribute": attribute,
+            },
+        }
+
     url = f"{settings.HA_URL}/api/states/{entity_id}"
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
@@ -206,6 +263,25 @@ async def get_discovered_devices() -> list[dict]:
         domain = entity_id.split(".")[0]
         device_class = attrs.get("device_class", "")
 
+        if domain == "weather":
+            for attribute, sensor_meta in WEATHER_ATTRIBUTE_SENSORS.items():
+                raw_value = attrs.get(attribute)
+                if raw_value is None:
+                    continue
+
+                devices.append(
+                    {
+                        "entity_id": build_attribute_entity_id(entity_id, attribute),
+                        "name": f"{attrs.get('friendly_name', entity_id)} - {sensor_meta['label']}",
+                        "device_type": sensor_meta["device_type"],
+                        "unit": attrs.get(f"{attribute}_unit") or sensor_meta["unit"],
+                        "area_id": entity_area_map.get(entity_id),
+                        "visibility": "public",
+                        "state": str(raw_value),
+                    }
+                )
+            continue
+
         device_type = TYPE_MAP.get(device_class, domain)
 
         devices.append(
@@ -224,6 +300,9 @@ async def get_discovered_devices() -> list[dict]:
 
 
 async def delete_entity(entity_id: str) -> bool:
+    if parse_attribute_entity_id(entity_id):
+        return True
+
     url = f"{settings.HA_URL}/api/states/{entity_id}"
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:

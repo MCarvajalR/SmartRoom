@@ -31,9 +31,8 @@ class TelemetryRecord(Base):
     """
 
     __tablename__ = "telemetry_records"
-
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    device_id: Mapped[int] = mapped_column(Integer, ForeignKey("devices.id"), nullable=False)
+    device_id: Mapped[int] = mapped_column(Integer, ForeignKey("devices.id"), nullable=False, index=True)
     value: Mapped[float | None] = mapped_column(Float, nullable=True)
     raw_state: Mapped[str] = mapped_column(String(50), nullable=False)
     recorded_at: Mapped[datetime] = mapped_column(

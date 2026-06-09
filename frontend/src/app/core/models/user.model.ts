@@ -10,7 +10,7 @@ export interface User {
 }
 
 export interface LoginRequest {
-  username: string;
+  identifier: string;
   password: string;
 }
 
@@ -25,4 +25,19 @@ export interface UserCreate {
   email: string;
   password: string;
   role: UserRole;
+}
+
+export interface UserUpdate {
+  username?: string;
+  email?: string;
+  password?: string;
+  role?: UserRole;
+  is_active?: boolean;
+}
+
+export interface ProfileUpdate {
+  username?: string;
+  email?: string;
+  current_password?: string;
+  new_password?: string;
 }

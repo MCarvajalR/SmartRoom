@@ -36,18 +36,17 @@ import { AuthService } from '../../core/services/auth.service';
             <div class="menu-separator">Gestión Laboratorio</div>
             
             <li>
-              <a routerLink="/admin/devices" routerLinkActive="active">
-                <i class="fa-brands fa-connectdevelop"></i> Dispositivos
-              </a>
-            </li>
-            
-            <li>
               <a routerLink="/admin/telemetry" routerLinkActive="active">
                 <i class="fa-solid fa-chart-line"></i> Historial
               </a>
             </li>
             
             @if (auth.hasRole('admin')) {
+              <li>
+                <a routerLink="/admin/devices" routerLinkActive="active">
+                  <i class="fa-brands fa-connectdevelop"></i> Dispositivos
+                </a>
+              </li>
               <li>
                 <a routerLink="/admin/users" routerLinkActive="active">
                   <i class="fa-solid fa-chalkboard-user"></i> Usuarios

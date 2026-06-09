@@ -15,12 +15,12 @@ import { AuthService } from '../../../core/services/auth.service';
 
         <form [formGroup]="form" (ngSubmit)="submit()">
           <div class="field">
-            <label for="username">Usuario</label>
+            <label for="identifier">Usuario o correo institucional</label>
             <input
-              id="username"
+              id="identifier"
               type="text"
-              formControlName="username"
-              placeholder="Ej. admin"
+              formControlName="identifier"
+              placeholder="Ej. jperez o jperez@unicauca.edu.co"
               autocomplete="username" />
           </div>
 
@@ -71,7 +71,7 @@ import { AuthService } from '../../../core/services/auth.service';
 })
 export class LoginComponent {
   form = this.fb.group({
-    username: ['', Validators.required],
+    identifier: ['', Validators.required],
     password: ['', Validators.required],
   });
 
@@ -92,8 +92,8 @@ export class LoginComponent {
     this.loading = true;
     this.error = '';
 
-    const { username, password } = this.form.value;
-    this.auth.login({ username: username!, password: password! }).subscribe({
+    const { identifier, password } = this.form.value;
+    this.auth.login({ identifier: identifier!, password: password! }).subscribe({
       next: () => this.enterDashboard(),
       error: () => {
         this.error = 'Credenciales incorrectas';

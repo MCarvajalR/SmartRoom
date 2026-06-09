@@ -18,7 +18,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -26,6 +26,7 @@ from app.core.database import AsyncSessionLocal, Base, engine
 from app.core.security import hash_password
 from app.models import Settings, User
 from app.services import telemetry_service
+from app.services.energy_simulator import ensure_energy_simulator
 from app.services.device_sync import sync_devices_from_ha
 from app.services.ha_websocket import start_ha_listener
 from app.services.scheduler import scheduler
@@ -33,6 +34,33 @@ from app.services.scheduler import scheduler
 # Configurar logging con formato legible
 logging.basicConfig(level=logging.INFO, format="%(levelname)s | %(name)s | %(message)s")
 logger = logging.getLogger(__name__)
+
+
+async def ensure_database_indexes() -> None:
+    """
+    Crea índices operativos que aceleran consultas frecuentes.
+
+    create_all no siempre añade índices nuevos sobre tablas ya existentes,
+    por eso los aseguramos explícitamente al iniciar la aplicación.
+    """
+    statements = (
+        """
+        CREATE INDEX IF NOT EXISTS ix_telemetry_records_recorded_at_desc
+        ON telemetry_records (recorded_at DESC)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS ix_telemetry_records_device_recorded_at_desc
+        ON telemetry_records (device_id, recorded_at DESC)
+        """,
+        """
+        CREATE INDEX IF NOT EXISTS ix_devices_active_visibility_id
+        ON devices (is_active, visibility, id)
+        """,
+    )
+
+    async with engine.begin() as conn:
+        for statement in statements:
+            await conn.execute(text(statement))
 
 
 async def run_device_sync() -> None:
@@ -71,20 +99,31 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Tablas verificadas/creadas.")
 
+    await ensure_database_indexes()
+    logger.info("Índices operativos verificados/creados.")
+
     # 2. Crear usuario admin por defecto si no existe
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.username == "admin"))
-        if not result.scalar_one_or_none():
+        admin_user = result.scalar_one_or_none()
+        if not admin_user:
             db.add(
                 User(
                     username="admin",
-                    email="admin@smartroom.local",
+                    email="admin@unicauca.edu.co",
                     hashed_password=hash_password("admin123"),
                     role="admin",
                 )
             )
             await db.commit()
             logger.info("Usuario admin creado (admin / admin123)")
+        elif admin_user.email == "admin@smartroom.local":
+            admin_user.email = "admin@unicauca.edu.co"
+            await db.commit()
+            logger.info("Correo del administrador inicial normalizado al dominio institucional.")
+
+        simulator = await ensure_energy_simulator(db)
+        logger.info("Simulador energético verificado: %s", simulator.entity_id)
 
     # 3. Configurar scheduler con jobs periódicos
     scheduler.add_job(

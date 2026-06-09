@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { tap } from 'rxjs/operators';
-import { LoginRequest, TokenResponse, User, UserCreate, UserRole } from '../models/user.model';
+import { LoginRequest, ProfileUpdate, TokenResponse, User, UserCreate, UserRole, UserUpdate } from '../models/user.model';
 import { API_BASE_URL } from '../api.config';
 
 @Injectable({ providedIn: 'root' })
@@ -54,6 +54,20 @@ export class AuthService {
 
   createUser(data: UserCreate) {
     return this.http.post<User>(`${API_BASE_URL}/auth/users`, data);
+  }
+
+  updateProfile(data: ProfileUpdate) {
+    return this.http.patch<User>(`${API_BASE_URL}/auth/me`, data).pipe(
+      tap(user => this._user.set(user))
+    );
+  }
+
+  updateUser(userId: number, data: UserUpdate) {
+    return this.http.patch<User>(`${API_BASE_URL}/auth/users/${userId}`, data);
+  }
+
+  deleteUser(userId: number) {
+    return this.http.delete<void>(`${API_BASE_URL}/auth/users/${userId}`);
   }
 
   logout() {

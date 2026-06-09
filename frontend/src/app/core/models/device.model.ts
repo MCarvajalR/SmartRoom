@@ -1,4 +1,19 @@
-export type DeviceType = 'temperature' | 'humidity' | 'plug' | 'lock' | 'light' | 'other';
+export type DeviceType =
+  | 'temperature'
+  | 'humidity'
+  | 'power'
+  | 'energy'
+  | 'plug'
+  | 'lock'
+  | 'light'
+  | 'sensor'
+  | 'binary_sensor'
+  | 'input_boolean'
+  | 'switch'
+  | 'device_tracker'
+  | 'climate'
+  | 'cover'
+  | 'other';
 export type Visibility = 'public' | 'docente' | 'admin';
 
 export interface Device {
@@ -17,7 +32,7 @@ export interface DeviceCreate {
   entity_id: string;
   name: string;
   device_type: DeviceType;
-  unit?: string;
+  unit?: string | null;
   area_id?: string;
   visibility: Visibility;
 }
@@ -25,7 +40,7 @@ export interface DeviceCreate {
 export interface DeviceUpdate {
   name?: string;
   device_type?: DeviceType;
-  unit?: string;
+  unit?: string | null;
   area_id?: string | null;
   is_active?: boolean;
   visibility?: Visibility;

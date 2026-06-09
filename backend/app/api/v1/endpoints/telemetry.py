@@ -16,7 +16,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import desc, select, func
+from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, get_optional_user, get_visible_levels, require_roles
@@ -111,22 +111,46 @@ async def get_history(
     """
     levels = get_visible_levels(current_user)
 
-    # Query base con join a Device para verificar visibilidad
-    query = (
-        select(TelemetryRecord, Device)
-        .join(Device, TelemetryRecord.device_id == Device.id)
-        .where(Device.is_active.is_(True))
-        .where(Device.visibility.in_(levels))
-        .order_by(desc(TelemetryRecord.recorded_at))
-    )
-
-    # Aplicar filtros
+    # Query base con join a Device para verificar visibilidad.
+    # Cuando se filtra por dispositivo, el índice (device_id, recorded_at)
+    # evita recorrer todo el historial.
     if device_id:
-        query = query.where(TelemetryRecord.device_id == device_id)
-    if start:
-        query = query.where(TelemetryRecord.recorded_at >= start)
-    if end:
-        query = query.where(TelemetryRecord.recorded_at <= end)
+        query = (
+            select(TelemetryRecord, Device)
+            .join(Device, TelemetryRecord.device_id == Device.id)
+            .where(Device.is_active.is_(True))
+            .where(Device.visibility.in_(levels))
+            .where(TelemetryRecord.device_id == device_id)
+        )
+
+        if start:
+            query = query.where(TelemetryRecord.recorded_at >= start)
+        if end:
+            query = query.where(TelemetryRecord.recorded_at <= end)
+    else:
+        # Para "todos los dispositivos", primero se reduce el universo a los
+        # últimos registros del rango y después se aplica visibilidad.
+        recent_records = select(TelemetryRecord.id)
+
+        if start:
+            recent_records = recent_records.where(TelemetryRecord.recorded_at >= start)
+        if end:
+            recent_records = recent_records.where(TelemetryRecord.recorded_at <= end)
+
+        recent_records = (
+            recent_records
+            .order_by(desc(TelemetryRecord.recorded_at))
+            .limit(min(limit + offset + 100, 2000))
+            .subquery()
+        )
+
+        query = (
+            select(TelemetryRecord, Device)
+            .join(recent_records, TelemetryRecord.id == recent_records.c.id)
+            .join(Device, TelemetryRecord.device_id == Device.id)
+            .where(Device.is_active.is_(True))
+            .where(Device.visibility.in_(levels))
+        )
     
     # Filtro por fecha (YYYY-MM-DD)
     if date:
@@ -150,7 +174,9 @@ async def get_history(
         except ValueError:
             pass
 
-    result = await db.execute(query.offset(offset).limit(limit))
+    result = await db.execute(
+        query.order_by(desc(TelemetryRecord.recorded_at)).offset(offset).limit(limit)
+    )
     rows = result.all()
 
     return [

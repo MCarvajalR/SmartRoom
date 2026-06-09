@@ -75,25 +75,12 @@ async def sync_devices_from_ha(db: AsyncSession) -> dict:
                 created += 1
                 continue
 
-            # Dispositivo existente: verificar cambios
+            # Dispositivo existente: conservar metadatos administrados localmente.
+            # Home Assistant sigue siendo la fuente para el área y la presencia,
+            # pero no debe deshacer nombre, tipo o unidad editados por un admin.
             changed = False
 
-            new_name = payload.get("name") or entity_id
-            new_type = payload.get("device_type") or "other"
-            new_unit = payload.get("unit")
             new_area = payload.get("area_id")
-
-            if existing.name != new_name:
-                existing.name = new_name
-                changed = True
-
-            if existing.device_type != new_type:
-                existing.device_type = new_type
-                changed = True
-
-            if existing.unit != new_unit:
-                existing.unit = new_unit
-                changed = True
 
             if existing.area_id != new_area:
                 existing.area_id = new_area

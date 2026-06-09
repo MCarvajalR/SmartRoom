@@ -27,6 +27,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/access/access.component').then(m => m.AccessComponent)
   },
+  {
+    path: 'profile',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/profile/profile.component').then(m => m.ProfileComponent)
+  },
 
   // 5. GESTIÓN OPERATIVA Y ADMINISTRATIVA
   {
@@ -37,6 +43,7 @@ export const routes: Routes = [
       // Sub-bloque A: Gestión de Hardware (Admin y Docente)
       {
         path: 'devices',
+        canActivate: [roleGuard('admin')],
         loadComponent: () =>
           import('./features/admin/devices/admin-devices.component').then(m => m.AdminDevicesComponent)
       },

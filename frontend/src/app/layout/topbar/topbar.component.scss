@@ -92,6 +92,94 @@
   }
 }
 
+.account-menu {
+  position: relative;
+}
+
+.menu-chevron {
+  margin-left: var(--space-1);
+  font-size: 0.65rem;
+  transition: transform var(--transition-interactive);
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.account-dropdown {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 200;
+  width: min(280px, calc(100vw - var(--space-6) * 2));
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+
+  a,
+  button {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: var(--space-3);
+    border: 0;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+
+    i {
+      width: 18px;
+      color: var(--color-primary);
+      text-align: center;
+    }
+
+    &:hover {
+      background: var(--color-surface-offset);
+    }
+  }
+
+  .logout-option {
+    color: var(--color-error);
+
+    i {
+      color: currentColor;
+    }
+  }
+}
+
+.account-summary {
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-divider);
+
+  strong,
+  span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    font-size: var(--text-sm);
+  }
+
+  span {
+    margin-top: 2px;
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+  }
+}
+
 .btn-login {
   background: var(--color-primary);
   border: 1px solid var(--color-primary);
@@ -99,5 +187,17 @@
 
   &:hover {
     background: var(--color-primary-hover);
+  }
+}
+
+@media (max-width: 620px) {
+  .topbar {
+    padding: 0 var(--space-3);
+  }
+
+  .btn-ha span,
+  .theme-toggle span,
+  .profile-button span {
+    display: none;
   }
 }
