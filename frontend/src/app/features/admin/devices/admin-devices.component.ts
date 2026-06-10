@@ -34,7 +34,7 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
   { value: 'lock', label: 'Cerradura' },
   { value: 'light', label: 'Iluminaci\u00f3n' },
   { value: 'binary_sensor', label: 'Sensor binario' },
-  { value: 'input_boolean', label: 'Interruptor' },
+  { value: 'input_boolean', label: 'Interruptor simulado' },
   { value: 'switch', label: 'Interruptor' },
   { value: 'device_tracker', label: 'Rastreador de dispositivo' },
   { value: 'climate', label: 'Climatizaci\u00f3n' },

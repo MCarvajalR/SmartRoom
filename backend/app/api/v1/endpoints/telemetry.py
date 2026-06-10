@@ -54,11 +54,7 @@ async def get_latest(
         Lista de TelemetryLatest con el último valor de cada sensor
     """
     levels = get_visible_levels(current_user)
-    result = await db.execute(
-        select(Device)
-        .where(Device.is_active == True, Device.visibility.in_(levels))
-        .where(~Device.entity_id.contains(ha_client.VIRTUAL_ATTRIBUTE_SEPARATOR))
-    )
+    result = await db.execute(select(Device).where(Device.is_active == True, Device.visibility.in_(levels)))
     devices = result.scalars().all()
 
     output = []
@@ -134,7 +130,6 @@ async def get_history(
             .join(Device, TelemetryRecord.device_id == Device.id)
             .where(Device.is_active.is_(True))
             .where(Device.visibility.in_(levels))
-            .where(~Device.entity_id.contains(ha_client.VIRTUAL_ATTRIBUTE_SEPARATOR))
             .where(TelemetryRecord.device_id == device_id)
         )
 
@@ -165,7 +160,6 @@ async def get_history(
             .join(Device, TelemetryRecord.device_id == Device.id)
             .where(Device.is_active.is_(True))
             .where(Device.visibility.in_(levels))
-            .where(~Device.entity_id.contains(ha_client.VIRTUAL_ATTRIBUTE_SEPARATOR))
         )
     
     # Filtro por fecha (YYYY-MM-DD)
