@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     
     # Telemetría
     TELEMETRY_INTERVAL_SECONDS: int = 60
+    HA_HISTORY_BACKFILL_ENABLED: bool = True
+    HA_HISTORY_BACKFILL_DAYS: int = 30
+    HA_HISTORY_BACKFILL_CHUNK_HOURS: int = 24
 
 
 

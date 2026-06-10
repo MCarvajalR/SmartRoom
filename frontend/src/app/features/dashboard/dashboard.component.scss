@@ -117,11 +117,11 @@
   position: relative; display: flex; min-width: 0; min-height: 128px; gap: 14px; padding: 15px; overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent); border-radius: 14px; background: color-mix(in srgb, var(--color-surface-2) 92%, var(--color-primary) 8%);
   transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  cursor: pointer;
   &::after { content: ""; position: absolute; right: -35px; bottom: -55px; width: 110px; height: 110px; border-radius: 50%; background: color-mix(in srgb, var(--color-primary) 7%, transparent); }
   &:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); transform: translateY(-2px); }
-  &.access-card { cursor: pointer; }
   &.state-unavailable { opacity: 0.65; }
-  &.updated { animation: flash 1.4s ease-out; }
+  &.updated { animation: flash 1.35s ease-out; border-color: var(--color-primary); }
 }
 .visual-icon { display: grid; flex: 0 0 58px; width: 58px; height: 58px; place-items: center; align-self: center; border-radius: 18px; background: var(--color-primary-highlight); color: var(--color-primary); font-size: 1.65rem; }
 .type-temperature .visual-icon { background: var(--color-orange-highlight); color: var(--color-orange); }
@@ -137,7 +137,7 @@
 .access-hint { color: var(--color-primary); font-weight: 800; }
 .load-error { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 20px; color: var(--color-error); }
 .skeleton { min-height: 130px; animation: pulse 1.2s infinite alternate; }
-@keyframes flash { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 45%, transparent); } to { box-shadow: none; } }
+@keyframes flash { from { box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary) 35%, transparent); } to { box-shadow: none; } }
 @keyframes pulse { to { opacity: 0.45; } }
 @keyframes celestial-float { 50% { transform: translateY(8px) rotate(5deg); } }
 @keyframes cloud-drift { to { left: calc(100% + 140px); } }

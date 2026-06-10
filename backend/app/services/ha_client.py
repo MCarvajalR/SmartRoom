@@ -15,6 +15,7 @@ errores de conexión de manera silenciosa (logging de advertencias).
 
 import json
 import logging
+from datetime import datetime
 
 import httpx
 import websockets
@@ -195,6 +196,43 @@ async def get_all_states() -> list[dict]:
             return data if isinstance(data, list) else []
     except Exception as exc:
         logger.error("HA get_all_states error: %s", exc)
+        return []
+
+
+async def get_history(
+    entity_ids: list[str],
+    start: datetime,
+    end: datetime,
+    include_attributes: bool = False,
+) -> list[list[dict]]:
+    """
+    Obtiene cambios historicos desde el recorder de Home Assistant.
+
+    Home Assistant retorna una lista por entidad filtrada. Cuando se importan
+    atributos virtuales, include_attributes debe quedar activo porque el valor
+    vive dentro de attributes y no en state.
+    """
+    if not entity_ids:
+        return []
+
+    start_value = start.isoformat()
+    url = f"{settings.HA_URL}/api/history/period/{start_value}"
+    params: dict[str, str] = {
+        "end_time": end.isoformat(),
+        "filter_entity_id": ",".join(entity_ids),
+    }
+    if not include_attributes:
+        params["minimal_response"] = ""
+        params["no_attributes"] = ""
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url, headers=_headers(), params=params)
+            response.raise_for_status()
+            data = response.json()
+            return data if isinstance(data, list) else []
+    except Exception as exc:
+        logger.error("HA get_history error: %s", exc)
         return []
 
 

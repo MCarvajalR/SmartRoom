@@ -479,10 +479,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return unavailable === 1 ? '1 sin conexión' : `${unavailable} sin conexión`;
   }
 
-  openAccess(device: TelemetryLatest) {
-    if (this.isAccessDevice(device)) {
-      this.router.navigate(['/access']);
-    }
+  openDeviceHistory(device: TelemetryLatest) {
+    this.router.navigate(['/admin/telemetry'], {
+      queryParams: { deviceId: device.device_id },
+    });
   }
 
   getDeviceIcon(deviceType: string, rawState: string): string {

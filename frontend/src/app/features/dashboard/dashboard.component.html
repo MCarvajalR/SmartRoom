@@ -57,8 +57,8 @@
           <span>Humedad {{ interiorHumidity ? getFriendlyValue(interiorHumidity) + ' ' + cleanUnit(interiorHumidity.unit) : '—' }}</span>
         </div>
         <div class="weather-details indoor-details">
-          <div><i class="fas fa-temperature-half"></i><span>Sensor</span><strong>{{ interiorTemperature?.device_name || 'Esperando sensor' }}</strong></div>
-          <div><i class="fas fa-droplet"></i><span>Humedad</span><strong>{{ interiorHumidity ? getFriendlyValue(interiorHumidity) + ' ' + cleanUnit(interiorHumidity.unit) : '—' }}</strong></div>
+          <div><i class="fas fa-temperature-half"></i><span>Temperatura</span><strong>{{ interiorTemperature ? getFriendlyValue(interiorTemperature) + ' ' + cleanUnit(interiorTemperature.unit) : '—' }}</strong></div>
+          <div><i class="fas fa-microchip"></i><span>Sensor</span><strong>{{ interiorTemperature?.device_name || interiorHumidity?.device_name || 'Esperando sensor' }}</strong></div>
           <div><i class="fas fa-wifi"></i><span>Conexión</span><strong>{{ interiorTemperature && !isUnavailable(interiorTemperature) ? 'Disponible' : 'Sin datos' }}</strong></div>
           <div><i class="fas fa-clock"></i><span>Actualizado</span><strong>{{ interiorTemperature?.recorded_at | date:'HH:mm:ss' }}</strong></div>
         </div>
@@ -80,13 +80,13 @@
             <div class="empty-area"><i class="fas fa-plus"></i><span>Área lista para recibir dispositivos</span></div>
           }
           @for (d of area.devices; track d.device_id) {
-            <article class="metric-card" [ngClass]="['type-' + d.device_type, isUnavailable(d) ? 'state-unavailable' : 'state-ready']" [class.updated]="recentlyUpdated.has(d.device_id)" [class.access-card]="isAccessDevice(d)" [attr.role]="isAccessDevice(d) ? 'button' : null" [attr.tabindex]="isAccessDevice(d) ? 0 : null" (click)="openAccess(d)" (keydown.enter)="openAccess(d)">
+            <article class="metric-card" [ngClass]="['type-' + d.device_type, isUnavailable(d) ? 'state-unavailable' : 'state-ready']" [class.updated]="recentlyUpdated.has(d.device_id)" role="button" tabindex="0" (click)="openDeviceHistory(d)" (keydown.enter)="openDeviceHistory(d)">
               <div class="visual-icon"><i class="fas" [ngClass]="getDeviceIcon(d.device_type, d.raw_state)"></i></div>
               <div class="metric-content">
                 <span class="metric-context">{{ getDeviceContext(d) }}</span>
                 <h3>{{ getDisplayName(d.device_name) }}</h3>
                 <div class="metric-value"><strong>{{ getFriendlyValue(d) }}</strong>@if (d.value !== null && cleanUnit(d.unit)) { <span>{{ cleanUnit(d.unit) }}</span> }</div>
-                <div class="metric-meta"><span><i class="fas fa-clock"></i> {{ d.recorded_at | date:'HH:mm' }}</span>@if (isAccessDevice(d)) { <span class="access-hint">Gestionar <i class="fas fa-arrow-right"></i></span> }</div>
+                <div class="metric-meta"><span><i class="fas fa-clock"></i> {{ d.recorded_at | date:'HH:mm' }}</span><span class="access-hint">Historial <i class="fas fa-arrow-right"></i></span></div>
               </div>
             </article>
           }

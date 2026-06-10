@@ -58,7 +58,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/smartroom_db
+      DATABASE_URL: postgresql+asyncpg://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       HA_URL: ${HA_URL}
       HA_PUBLIC_URL: ${HA_PUBLIC_URL}
       HA_TOKEN: ${HA_TOKEN}
@@ -67,7 +67,10 @@ services:
       JWT_ALGORITHM: ${JWT_ALGORITHM}
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES}
       TELEMETRY_INTERVAL_SECONDS: ${TELEMETRY_INTERVAL_SECONDS}
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+      HA_HISTORY_BACKFILL_ENABLED: ${HA_HISTORY_BACKFILL_ENABLED:-true}
+      HA_HISTORY_BACKFILL_DAYS: ${HA_HISTORY_BACKFILL_DAYS:-30}
+      HA_HISTORY_BACKFILL_CHUNK_HOURS: ${HA_HISTORY_BACKFILL_CHUNK_HOURS:-24}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 
   frontend:
     build:

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api.config';
 import { Device } from '../../../core/models/device.model';
@@ -42,6 +43,7 @@ interface HistoryCacheState {
   devices: Device[];
   history: TelemetryHistoryItem[];
   selectedDeviceId: number | null;
+  deviceSearchTerm: string;
   rangePreset: RangePreset;
   startDateTime: string;
   endDateTime: string;
@@ -73,20 +75,72 @@ interface HistoryCacheState {
       <section class="filters-section" aria-label="Filtros de historial">
         <div class="filter-group device-filter">
           <label>Dispositivo</label>
+          <div class="device-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              type="text"
+              [(ngModel)]="deviceSearchTerm"
+              (ngModelChange)="onDeviceSearchChange()"
+              placeholder="Buscar dispositivo"
+              aria-label="Buscar dispositivo" />
+            @if (deviceSearchTerm) {
+              <button type="button" class="clear-search" (click)="clearDeviceSearch()" aria-label="Limpiar búsqueda">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            }
+          </div>
+          @if (deviceSearchTerm) {
+            <div class="search-results" role="listbox" aria-label="Resultados de busqueda de dispositivos">
+              @if (filteredDevices.length > 0) {
+                @for (d of visibleSearchResults; track d.id) {
+                  <button
+                    type="button"
+                    class="search-result"
+                    [class.selected]="d.id === selectedDeviceId"
+                    (click)="selectDeviceFromSearch(d)">
+                    <span>{{ getDeviceSearchLabel(d) }}</span>
+                    <small>{{ d.entity_id }}</small>
+                  </button>
+                }
+                @if (filteredDevices.length > visibleSearchResults.length) {
+                  <div class="search-more">
+                    {{ filteredDevices.length - visibleSearchResults.length }} resultados mas
+                  </div>
+                }
+              } @else {
+                <div class="search-empty">Sin coincidencias</div>
+              }
+            </div>
+          }
           <select [(ngModel)]="selectedDeviceId" (change)="loadHistory()">
             <option [ngValue]="null">Todos los dispositivos</option>
-            @if (weatherDevices.length) {
+            @if (selectedDevice && deviceSearchTerm && !isDeviceVisibleInSearch(selectedDevice)) {
+              <option [ngValue]="selectedDevice.id">{{ selectedDevice.name }}</option>
+            }
+            @if (filteredWeatherDevices.length) {
               <optgroup label="Clima exterior">
-                @for (d of weatherDevices; track d.id) {
+                @for (d of filteredWeatherDevices; track d.id) {
                   <option [ngValue]="d.id">{{ weatherMetricLabel(d) }}</option>
                 }
               </optgroup>
             }
-            <optgroup label="Dispositivos">
-              @for (d of regularDevices; track d.id) {
-                <option [ngValue]="d.id">{{ d.name }}</option>
-              }
-            </optgroup>
+            @if (filteredRegularDevices.length) {
+              <optgroup label="Dispositivos">
+                @for (d of filteredRegularDevices; track d.id) {
+                  <option [ngValue]="d.id">{{ d.name }}</option>
+                }
+              </optgroup>
+            }
+            @if (deviceSearchTerm && filteredDevices.length === 0) {
+              <option [ngValue]="selectedDeviceId" disabled>
+                Sin coincidencias
+              </option>
+            }
+            @if (!deviceSearchTerm && devices.length === 0) {
+              <option [ngValue]="null" disabled>
+                No hay dispositivos cargados
+              </option>
+            }
           </select>
         </div>
 
@@ -440,6 +494,7 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
   errorMessage = '';
 
   selectedDeviceId: number | null = null;
+  deviceSearchTerm = '';
   rangePreset: RangePreset = '24h';
   startDateTime = '';
   endDateTime = '';
@@ -452,6 +507,7 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
   constructor(
     private http: HttpClient,
     private deviceSvc: DeviceService,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -461,8 +517,9 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
       this.cdr.markForCheck();
     }, 10000);
 
+    const routeDeviceId = this.route.snapshot.queryParamMap.get('deviceId');
     const cachedState = TelemetryHistoryComponent.cache;
-    if (cachedState) {
+    if (cachedState && !routeDeviceId) {
       this.restoreCache(cachedState);
 
       if (this.rangePreset !== 'custom') {
@@ -475,6 +532,11 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
     }
 
     this.applyPreset(false);
+    if (routeDeviceId) {
+      const parsedDeviceId = Number(routeDeviceId);
+      this.selectedDeviceId = Number.isFinite(parsedDeviceId) ? parsedDeviceId : null;
+      this.deviceSearchTerm = '';
+    }
     this.loadDevices();
     this.loadHistory();
   }
@@ -499,6 +561,28 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
 
   get regularDevices(): Device[] {
     return this.devices.filter(device => !device.entity_id.toLowerCase().startsWith('weather.'));
+  }
+
+  get filteredDevices(): Device[] {
+    const term = this.normalizedDeviceSearchTerm;
+    if (!term) return this.devices;
+    return this.devices.filter(device => this.deviceMatchesSearch(device, term));
+  }
+
+  get filteredWeatherDevices(): Device[] {
+    return this.filteredDevices.filter(device => device.entity_id.toLowerCase().startsWith('weather.'));
+  }
+
+  get filteredRegularDevices(): Device[] {
+    return this.filteredDevices.filter(device => !device.entity_id.toLowerCase().startsWith('weather.'));
+  }
+
+  get normalizedDeviceSearchTerm(): string {
+    return this.normalizeSearchText(this.deviceSearchTerm);
+  }
+
+  get visibleSearchResults(): Device[] {
+    return this.filteredDevices.slice(0, 6);
   }
 
   get analysisMode(): AnalysisMode {
@@ -739,6 +823,21 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
     });
   }
 
+  onDeviceSearchChange() {
+    this.persistCache();
+  }
+
+  clearDeviceSearch() {
+    this.deviceSearchTerm = '';
+    this.persistCache();
+  }
+
+  selectDeviceFromSearch(device: Device) {
+    this.selectedDeviceId = device.id ?? null;
+    this.loadHistory();
+    this.persistCache();
+  }
+
   loadHistory(background = false) {
     this.historyRequest?.unsubscribe();
     if (!background) this.loading = true;
@@ -807,6 +906,7 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
     this.devices = cache.devices;
     this.history = cache.history;
     this.selectedDeviceId = cache.selectedDeviceId;
+    this.deviceSearchTerm = cache.deviceSearchTerm ?? '';
     this.rangePreset = cache.rangePreset;
     this.startDateTime = cache.startDateTime;
     this.endDateTime = cache.endDateTime;
@@ -823,12 +923,44 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
       devices: this.devices,
       history: this.history,
       selectedDeviceId: this.selectedDeviceId,
+      deviceSearchTerm: this.deviceSearchTerm,
       rangePreset: this.rangePreset,
       startDateTime: this.startDateTime,
       endDateTime: this.endDateTime,
       limit: this.limit,
       fetchedAt: this.updatedAt ?? Date.now(),
     };
+  }
+
+  isDeviceVisibleInSearch(device: Device): boolean {
+    const term = this.normalizedDeviceSearchTerm;
+    return !term || this.deviceMatchesSearch(device, term);
+  }
+
+  getDeviceSearchLabel(device: Device): string {
+    return device.entity_id.toLowerCase().startsWith('weather.')
+      ? this.weatherMetricLabel(device)
+      : device.name;
+  }
+
+  private deviceMatchesSearch(device: Device, term: string): boolean {
+    const haystack = [
+      device.name,
+      device.entity_id,
+      device.device_type,
+      device.unit ?? '',
+      this.weatherMetricLabel(device),
+    ].map(value => this.normalizeSearchText(value)).join(' ');
+
+    return haystack.includes(term);
+  }
+
+  private normalizeSearchText(value: string): string {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
   }
 
   isOpenState(rawState: string): boolean {

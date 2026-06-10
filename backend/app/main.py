@@ -172,6 +172,8 @@ async def lifespan(app: FastAPI):
 
     # 5. Sincronización inicial
     await run_device_sync()
+    imported = await telemetry_service.backfill_from_home_assistant()
+    logger.info("Backfill inicial desde Home Assistant: %d registros importados.", imported)
     await asyncio.sleep(2)  # Pequeño delay para asegurar sincronización
 
     # 6. Iniciar listener de WebSocket de HA en background

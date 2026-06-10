@@ -11,7 +11,7 @@ import { SettingsService } from '../../core/services/settings.service';
   template: `
     <header class="topbar">
       <div class="topbar-left">
-        @if (auth.hasRole('admin')) {
+        @if (auth.hasRole('admin') && haUrl) {
           <a [href]="haUrl" target="_blank" class="btn-ha">
             <i class="fa-solid fa-house-signal"></i>
             <span>Abrir Home Assistant</span>
@@ -78,7 +78,7 @@ import { SettingsService } from '../../core/services/settings.service';
 })
 export class TopbarComponent implements OnInit {
   menuOpen = false;
-  haUrl = 'http://192.168.211.55:8123';
+  haUrl = '';
 
   constructor(
     public auth: AuthService,
