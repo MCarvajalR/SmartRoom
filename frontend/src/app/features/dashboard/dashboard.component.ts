@@ -453,7 +453,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getDisplayName(name: string): string {
     return name
-      .replace(/\s*\((simulado|simulada)\)\s*/gi, '')
       .replace(/^Forecast Casa\s*-\s*/i, '')
       .replace(/\s+/g, ' ')
       .trim();

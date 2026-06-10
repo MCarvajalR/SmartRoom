@@ -27,7 +27,6 @@ from app.core.security import hash_password
 from app.models import Device, Settings, User
 from app.services import ha_client, telemetry_service
 from app.services.area_service import ensure_local_areas
-from app.services.energy_simulator import ensure_energy_simulator
 from app.services.device_sync import sync_devices_from_ha
 from app.services.ha_websocket import start_ha_listener
 from app.services.scheduler import scheduler
@@ -142,9 +141,6 @@ async def lifespan(app: FastAPI):
             admin_user.email = "admin@unicauca.edu.co"
             await db.commit()
             logger.info("Correo del administrador inicial normalizado al dominio institucional.")
-
-        simulator = await ensure_energy_simulator(db)
-        logger.info("Simulador energético verificado: %s", simulator.entity_id)
 
     # 3. Configurar scheduler con jobs periódicos
     scheduler.add_job(

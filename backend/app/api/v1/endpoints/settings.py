@@ -88,7 +88,7 @@ async def get_settings(
     
     Si no existe configuración, crea una por defecto:
     - telemetry_interval_seconds: 60
-    - door_entity_id: input_boolean.puerta_laboratorio_simulada
+    - door_entity_id: None
     
     Returns:
         SettingsResponse con la configuración actual
@@ -116,7 +116,7 @@ async def get_settings(
         settings = Settings(
             id=1,
             telemetry_interval_seconds=60,
-            door_entity_id="input_boolean.puerta_laboratorio_simulada",
+            door_entity_id=None,
             updated_at=datetime.now(timezone.utc)
         )
         db.add(settings)
@@ -158,7 +158,7 @@ async def update_settings(
         settings = Settings(
             id=1,
             telemetry_interval_seconds=payload.telemetry_interval_seconds or 60,
-            door_entity_id=payload.door_entity_id or "input_boolean.puerta_laboratorio_simulada",
+            door_entity_id=payload.door_entity_id,
             updated_at=datetime.now(timezone.utc)
         )
         db.add(settings)

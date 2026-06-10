@@ -7,8 +7,7 @@ Proporciona funcionalidad para:
 - Desbloquear la puerta (admin y docente)
 - Ver historial de eventos de acceso (admin y docente)
 
-La puerta puede ser un lock real o un input_boolean simulado
-(dependiendo de la configuración de Home Assistant).
+La puerta se controla desde una entidad real de Home Assistant.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,20 +24,13 @@ router = APIRouter(prefix="/access", tags=["Control de Acceso"])
 
 # Entity ID de la cerradura real en HA
 DOOR_LOCK_ENTITY_ID = "lock.puerta_laboratorio"
-# Entity ID de fallback (simulado) si no existe la cerradura
-DOOR_FALLBACK_ENTITY_ID = "input_boolean.puerta_laboratorio_simulada"
 
 
 async def get_door_entity_id() -> str:
     """
-    Retorna el entity_id de la puerta, verificando primero lock y luego fallback.
-    
-    Intenta usar la cerradura real, y si no existe, usa el input_boolean simulado.
+    Retorna el entity_id de la puerta real.
     """
-    state = await get_state(DOOR_LOCK_ENTITY_ID)
-    if state:
-        return DOOR_LOCK_ENTITY_ID
-    return DOOR_FALLBACK_ENTITY_ID
+    return DOOR_LOCK_ENTITY_ID
 
 
 async def call_door_service(action: str) -> bool:

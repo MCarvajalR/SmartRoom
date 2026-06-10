@@ -165,6 +165,7 @@ async def list_devices(
         select(Device)
         .where(Device.visibility.in_(levels))
         .where(Device.is_active.is_(True))
+        .where(~Device.entity_id.contains(ha_client.VIRTUAL_ATTRIBUTE_SEPARATOR))
         .order_by(Device.name)
     )
     return result.scalars().all()
@@ -315,6 +316,7 @@ async def list_used_areas(
         .where(Device.area_id.is_not(None))
         .where(Device.visibility.in_(levels))
         .where(Device.is_active.is_(True))
+        .where(~Device.entity_id.contains(ha_client.VIRTUAL_ATTRIBUTE_SEPARATOR))
         .distinct()
     )
     area_ids = [row[0] for row in result.fetchall() if row[0]]
@@ -345,6 +347,7 @@ async def get_devices_grouped_by_area(
         .where(Device.area_id.is_not(None))
         .where(Device.visibility.in_(levels))
         .where(Device.is_active.is_(True))
+        .where(~Device.entity_id.contains(ha_client.VIRTUAL_ATTRIBUTE_SEPARATOR))
         .order_by(Device.area_id, Device.name)
     )
     devices = result.scalars().all()
@@ -382,16 +385,6 @@ async def get_devices_grouped_by_area(
             )
         )
 
-    for area in local_areas:
-        if area.area_id not in known_area_ids:
-            response.append(
-                DevicesByAreaHybridOut(
-                    area_id=area.area_id,
-                    area_name=area.name,
-                    devices=[],
-                )
-            )
-
     response.sort(key=lambda x: x.area_name.lower())
     return response
 
@@ -421,6 +414,7 @@ async def list_devices_by_area(
         .where(Device.area_id == area_id)
         .where(Device.visibility.in_(levels))
         .where(Device.is_active.is_(True))
+        .where(~Device.entity_id.contains(ha_client.VIRTUAL_ATTRIBUTE_SEPARATOR))
         .order_by(Device.name)
     )
     devices = result.scalars().all()

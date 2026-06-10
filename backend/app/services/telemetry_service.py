@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import AsyncSessionLocal
 from app.models.device import Device
 from app.models.telemetry import TelemetryRecord
-from app.services import energy_simulator, ha_client
+from app.services import ha_client
 
 logger = logging.getLogger(__name__)
 
@@ -67,14 +67,7 @@ async def collect_all(db: AsyncSession | None = None) -> int:
         devices = result.scalars().all()
 
         # Request paralelo a HA para todos los dispositivos
-        tasks = [
-            (
-                energy_simulator.get_state()
-                if device.entity_id == energy_simulator.ENTITY_ID
-                else ha_client.get_state(device.entity_id)
-            )
-            for device in devices
-        ]
+        tasks = [ha_client.get_state(device.entity_id) for device in devices]
         states_data = await asyncio.gather(*tasks)
 
         # Crear registros de telemetría

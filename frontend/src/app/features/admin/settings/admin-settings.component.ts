@@ -40,7 +40,7 @@ interface SystemSettings {
           <p class="description">Entity ID del dispositivo que controla la puerta (cerradura inteligente).</p>
           
           <div class="interval-input">
-            <input type="text" [(ngModel)]="doorEntityId" (ngModelChange)="onDoorChange()" placeholder="input_boolean.puerta" />
+            <input type="text" [(ngModel)]="doorEntityId" (ngModelChange)="onDoorChange()" placeholder="lock.puerta_laboratorio" />
             <button class="btn-primary" (click)="saveSettings()" [disabled]="saving || !hasDoorChanged">
               {{ saving ? 'Guardando...' : 'Guardar' }}
             </button>
@@ -57,8 +57,8 @@ interface SystemSettings {
 export class AdminSettingsComponent implements OnInit {
   intervalValue = 60;
   currentInterval = 60;
-  doorEntityId = 'input_boolean.puerta_laboratorio_simulada';
-  currentDoorEntityId = 'input_boolean.puerta_laboratorio_simulada';
+  doorEntityId = '';
+  currentDoorEntityId = '';
   saving = false;
   saveMessage = '';
   hasChanged = false;
@@ -78,8 +78,8 @@ export class AdminSettingsComponent implements OnInit {
         console.log('Settings recibidos:', s);
         this.intervalValue = s.telemetry_interval_seconds;
         this.currentInterval = s.telemetry_interval_seconds;
-        this.doorEntityId = s.door_entity_id || 'input_boolean.puerta_laboratorio_simulada';
-        this.currentDoorEntityId = s.door_entity_id || 'input_boolean.puerta_laboratorio_simulada';
+        this.doorEntityId = s.door_entity_id || '';
+        this.currentDoorEntityId = s.door_entity_id || '';
         this.hasChanged = false;
         this.hasDoorChanged = false;
         this.loaded = true;
