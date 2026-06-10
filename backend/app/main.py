@@ -24,8 +24,9 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal, Base, engine
 from app.core.security import hash_password
-from app.models import Settings, User
-from app.services import telemetry_service
+from app.models import Device, Settings, User
+from app.services import ha_client, telemetry_service
+from app.services.area_service import ensure_local_areas
 from app.services.energy_simulator import ensure_energy_simulator
 from app.services.device_sync import sync_devices_from_ha
 from app.services.ha_websocket import start_ha_listener
@@ -104,6 +105,26 @@ async def lifespan(app: FastAPI):
 
     # 2. Crear usuario admin por defecto si no existe
     async with AsyncSessionLocal() as db:
+        suggested_area_names = {}
+        try:
+            suggested_area_names = {
+                area["area_id"]: area["name"]
+                for area in await ha_client.get_areas()
+                if area.get("area_id") and area.get("name")
+            }
+        except Exception:
+            logger.warning("Home Assistant no disponible para importar nombres iniciales de areas.")
+
+        device_areas = await db.execute(
+            select(Device.area_id).where(Device.area_id.is_not(None)).distinct()
+        )
+        await ensure_local_areas(
+            db,
+            {row[0] for row in device_areas.fetchall() if row[0]},
+            suggested_area_names,
+        )
+        await db.commit()
+
         result = await db.execute(select(User).where(User.username == "admin"))
         admin_user = result.scalar_one_or_none()
         if not admin_user:
@@ -162,9 +183,11 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         # Cleanup al cerrar
-        ha_task.cancel()
+        if ha_task:
+            ha_task.cancel()
         try:
-            await ha_task
+            if ha_task:
+                await ha_task
         except asyncio.CancelledError:
             pass
 

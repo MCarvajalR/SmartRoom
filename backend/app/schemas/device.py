@@ -39,7 +39,7 @@ class DeviceCreate(BaseModel):
         name: Nombre descriptivo del dispositivo
         device_type: Tipo de dispositivo (default: "other")
         unit: Unidad de medición (ej: "°C", "%")
-        area_id: ID del área en Home Assistant
+        area_id: ID del área local en SmartRoom
         visibility: Nivel de visibilidad (default: "public")
     """
     entity_id: str

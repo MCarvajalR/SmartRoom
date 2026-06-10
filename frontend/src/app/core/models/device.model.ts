@@ -64,3 +64,8 @@ export interface DevicesByArea {
   area_name: string;
   devices: AreaDevice[];
 }
+
+export interface Area {
+  area_id: string;
+  name: string;
+}

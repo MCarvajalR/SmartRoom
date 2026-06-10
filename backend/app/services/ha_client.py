@@ -17,6 +17,7 @@ import json
 import logging
 
 import httpx
+import websockets
 
 from app.core.config import settings
 
@@ -69,11 +70,61 @@ WEATHER_ATTRIBUTE_SENSORS = {
         "unit": "%",
         "label": "Humedad exterior",
     },
+    "apparent_temperature": {
+        "device_type": "temperature",
+        "unit": "°C",
+        "label": "Sensación térmica",
+    },
+    "dew_point": {
+        "device_type": "temperature",
+        "unit": "°C",
+        "label": "Punto de rocío",
+    },
+    "cloud_coverage": {
+        "device_type": "sensor",
+        "unit": "%",
+        "label": "Cobertura de nubes",
+    },
+    "uv_index": {
+        "device_type": "sensor",
+        "unit": None,
+        "label": "Índice UV",
+    },
+    "pressure": {
+        "device_type": "sensor",
+        "unit": "hPa",
+        "label": "Presión atmosférica",
+    },
+    "wind_speed": {
+        "device_type": "sensor",
+        "unit": "km/h",
+        "label": "Velocidad del viento",
+    },
+    "wind_gust_speed": {
+        "device_type": "sensor",
+        "unit": "km/h",
+        "label": "Ráfagas de viento",
+    },
+    "wind_bearing": {
+        "device_type": "sensor",
+        "unit": "°",
+        "label": "Dirección del viento",
+    },
+    "visibility": {
+        "device_type": "sensor",
+        "unit": "km",
+        "label": "Visibilidad",
+    },
 }
 
 
 def build_attribute_entity_id(entity_id: str, attribute: str) -> str:
     return f"{entity_id}{VIRTUAL_ATTRIBUTE_SEPARATOR}{attribute}"
+
+
+def is_system_managed_entity(entity_id: str) -> bool:
+    """Indica si la entidad es un atributo virtual usado por una tarjeta compuesta."""
+    return VIRTUAL_ATTRIBUTE_SEPARATOR in entity_id
 
 
 def parse_attribute_entity_id(entity_id: str) -> tuple[str, str] | None:
@@ -145,6 +196,22 @@ async def get_all_states() -> list[dict]:
     except Exception as exc:
         logger.error("HA get_all_states error: %s", exc)
         return []
+
+
+async def get_weather_summary() -> dict:
+    """Retorna condición meteorológica y estado solar sin convertirlos en dispositivos."""
+    states = await get_all_states()
+    weather = next((state for state in states if str(state.get("entity_id", "")).startswith("weather.")), None)
+    sun = next((state for state in states if state.get("entity_id") == "sun.sun"), None)
+
+    if not weather:
+        return {"condition": "unknown", "is_day": True, "entity_id": None}
+
+    return {
+        "condition": weather.get("state", "unknown"),
+        "is_day": not sun or sun.get("state") == "above_horizon",
+        "entity_id": weather.get("entity_id"),
+    }
 
 
 async def call_service(domain: str, service: str, entity_id: str, extra: dict | None = None) -> bool:
@@ -243,6 +310,47 @@ async def get_areas() -> list[dict]:
     except Exception as exc:
         logger.error("HA get_areas error: %s", exc)
         return []
+
+
+async def websocket_command(command: dict) -> dict:
+    """Ejecuta un comando autenticado contra el WebSocket de Home Assistant."""
+    ws_url = settings.HA_URL.replace("http://", "ws://").replace("https://", "wss://").rstrip("/") + "/api/websocket"
+
+    async with websockets.connect(ws_url, open_timeout=8, close_timeout=3) as websocket:
+        await websocket.recv()
+        await websocket.send(json.dumps({"type": "auth", "access_token": settings.HA_TOKEN}))
+        auth_response = json.loads(await websocket.recv())
+        if auth_response.get("type") != "auth_ok":
+            raise RuntimeError("Home Assistant rechazó la autenticación")
+
+        await websocket.send(json.dumps({"id": 1, **command}))
+        response = json.loads(await websocket.recv())
+        if not response.get("success"):
+            error = response.get("error", {}).get("message", "Comando rechazado por Home Assistant")
+            raise RuntimeError(error)
+        return response.get("result") or {}
+
+
+async def create_area(name: str) -> dict:
+    return await websocket_command({"type": "config/area_registry/create", "name": name})
+
+
+async def update_area(area_id: str, name: str) -> dict:
+    return await websocket_command({"type": "config/area_registry/update", "area_id": area_id, "name": name})
+
+
+async def delete_area(area_id: str) -> None:
+    await websocket_command({"type": "config/area_registry/delete", "area_id": area_id})
+
+
+async def assign_entity_area(entity_id: str, area_id: str | None) -> None:
+    virtual_attribute = parse_attribute_entity_id(entity_id)
+    target_entity_id = virtual_attribute[0] if virtual_attribute else entity_id
+    await websocket_command({
+        "type": "config/entity_registry/update",
+        "entity_id": target_entity_id,
+        "area_id": area_id,
+    })
 
 
 async def get_discovered_devices() -> list[dict]:

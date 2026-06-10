@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { API_BASE_URL } from '../../../core/api.config';
@@ -75,9 +75,18 @@ interface HistoryCacheState {
           <label>Dispositivo</label>
           <select [(ngModel)]="selectedDeviceId" (change)="loadHistory()">
             <option [ngValue]="null">Todos los dispositivos</option>
-            @for (d of devices; track d.id) {
-              <option [ngValue]="d.id">{{ d.name }} ({{ d.entity_id }})</option>
+            @if (weatherDevices.length) {
+              <optgroup label="Clima exterior">
+                @for (d of weatherDevices; track d.id) {
+                  <option [ngValue]="d.id">{{ weatherMetricLabel(d) }}</option>
+                }
+              </optgroup>
             }
+            <optgroup label="Dispositivos">
+              @for (d of regularDevices; track d.id) {
+                <option [ngValue]="d.id">{{ d.name }}</option>
+              }
+            </optgroup>
           </select>
         </div>
 
@@ -442,12 +451,14 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
 
   constructor(
     private http: HttpClient,
-    private deviceSvc: DeviceService
+    private deviceSvc: DeviceService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
     this.clockTimer = setInterval(() => {
       this.nowTimestamp = Date.now();
+      this.cdr.markForCheck();
     }, 10000);
 
     const cachedState = TelemetryHistoryComponent.cache;
@@ -482,6 +493,14 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
     return this.devices.find(device => device.id === this.selectedDeviceId) ?? null;
   }
 
+  get weatherDevices(): Device[] {
+    return this.devices.filter(device => device.entity_id.toLowerCase().startsWith('weather.'));
+  }
+
+  get regularDevices(): Device[] {
+    return this.devices.filter(device => !device.entity_id.toLowerCase().startsWith('weather.'));
+  }
+
   get analysisMode(): AnalysisMode {
     const device = this.selectedDevice;
     if (!device) return 'mixed';
@@ -504,7 +523,11 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
 
   get selectedDeviceLabel(): string {
     if (!this.selectedDeviceId) return 'Todos los dispositivos visibles';
-    return this.devices.find(device => device.id === this.selectedDeviceId)?.name ?? 'Dispositivo seleccionado';
+    const device = this.devices.find(item => item.id === this.selectedDeviceId);
+    if (!device) return 'Dispositivo seleccionado';
+    return device.entity_id.toLowerCase().startsWith('weather.')
+      ? `Clima exterior · ${this.weatherMetricLabel(device)}`
+      : device.name;
   }
 
   get updatedAgoLabel(): string {
@@ -521,6 +544,10 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
     if (!this.selectedDeviceId) return 'unidades mixtas';
     const unit = this.devices.find(device => device.id === this.selectedDeviceId)?.unit;
     return unit || 'sin unidad';
+  }
+
+  weatherMetricLabel(device: Device): string {
+    return device.name.replace(/^Forecast Casa\s*-\s*/i, '').trim();
   }
 
   get activeRangeLabel(): string {
@@ -703,9 +730,11 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
       next: devices => {
         this.devices = devices;
         this.persistCache();
+        this.cdr.markForCheck();
       },
       error: () => {
         if (!background) this.errorMessage = 'No se pudo cargar el listado de dispositivos.';
+        this.cdr.markForCheck();
       },
     });
   }
@@ -714,6 +743,7 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
     this.historyRequest?.unsubscribe();
     if (!background) this.loading = true;
     this.errorMessage = '';
+    this.cdr.markForCheck();
 
     this.historyRequest = this.http.get<TelemetryHistoryItem[]>(this.buildHistoryUrl()).subscribe({
       next: data => {
@@ -723,11 +753,13 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
         this.nowTimestamp = this.updatedAt;
         this.persistCache();
         this.loading = false;
+        this.cdr.markForCheck();
       },
       error: () => {
         if (!background) this.history = [];
         this.loading = false;
         if (!background) this.errorMessage = 'No se pudo consultar el historial de telemetría.';
+        this.cdr.markForCheck();
       }
     });
   }

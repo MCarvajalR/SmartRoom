@@ -42,7 +42,7 @@ class Device(Base):
         name: Nombre descriptivo del dispositivo
         device_type: Tipo de dispositivo (temperature, humidity, plug, etc.)
         unit: Unidad de medición (°C, %, W, etc.)
-        area_id: ID del área en Home Assistant a la que pertenece
+        area_id: ID del área local de SmartRoom a la que pertenece
         is_active: Indica si el dispositivo está activo para monitoreo
         visibility: Nivel de visibilidad (public, docente, admin, private)
         created_at: Fecha de creación del registro

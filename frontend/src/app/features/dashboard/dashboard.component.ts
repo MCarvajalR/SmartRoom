@@ -1,5 +1,5 @@
 import { Component, DestroyRef, OnDestroy, OnInit, inject } from '@angular/core';
-import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { EMPTY, forkJoin, of, timer } from 'rxjs';
@@ -9,7 +9,7 @@ import { DeviceService } from '../../core/services/device.service';
 import { RealtimeService, RealtimeUpdate } from '../../core/services/realtime.service';
 import { TelemetryService } from '../../core/services/telemetry.service';
 import { DevicesByArea } from '../../core/models/device.model';
-import { TelemetryLatest } from '../../core/models/telemetry.model';
+import { OutdoorWeather, TelemetryLatest } from '../../core/models/telemetry.model';
 
 interface DashboardArea {
   area_id: string;
@@ -17,10 +17,14 @@ interface DashboardArea {
   devices: TelemetryLatest[];
 }
 
+type WeatherAttribute =
+  | 'temperature' | 'humidity' | 'pressure' | 'wind_speed'
+  | 'wind_bearing' | 'dew_point' | 'cloud_coverage' | 'uv_index';
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [DatePipe, NgClass, DecimalPipe],
+  imports: [DatePipe, NgClass],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })
@@ -30,9 +34,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isInitialLoading = true;
   isRefreshing = false;
   loadError = false;
+  outdoorWeather: OutdoorWeather = {
+    location: 'Popayan', source: 'Open-Meteo', condition: 'unknown', is_day: true,
+    temperature: null, humidity: null, apparent_temperature: null, cloud_coverage: null,
+    pressure: null, precipitation: null, wind_speed: null, wind_direction: null,
+    recorded_at: null, available: false,
+  };
 
   private destroyRef = inject(DestroyRef);
   private unsubscribeWS!: () => void;
+  private unsubscribeAreaWS!: () => void;
   private areaCatalog: DevicesByArea[] = [];
 
   get devices(): TelemetryLatest[] {
@@ -53,9 +64,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     for (const area of this.areaCatalog) {
       const areaDevices = area.devices
         .map(device => device.id ? devicesById.get(device.id) : undefined)
-        .filter((device): device is TelemetryLatest => !!device);
-
-      if (!areaDevices.length) continue;
+        .filter((device): device is TelemetryLatest => !!device && !this.isClimateDevice(device));
 
       areaDevices.forEach(device => usedDeviceIds.add(device.device_id));
       groups.push({
@@ -66,11 +75,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     const unassigned = this.devices.filter(device => !usedDeviceIds.has(device.device_id));
-    if (unassigned.length) {
+    const trulyUnassigned = unassigned.filter(device => !usedDeviceIds.has(device.device_id) && !this.isClimateDevice(device));
+    if (trulyUnassigned.length) {
       groups.push({
         area_id: 'unassigned',
         area_name: 'Sin área asignada',
-        devices: unassigned,
+        devices: trulyUnassigned,
       });
     }
 
@@ -81,8 +91,37 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.devices.length;
   }
 
+  get logicalDeviceCount() {
+    return this.devices.filter(device => !this.isLegacyOutdoorWeather(device)).length;
+  }
+
   get areaCount() {
-    return this.areaGroups.length;
+    return this.areaGroups.filter(area => area.area_id !== 'unassigned').length;
+  }
+
+  get unavailableCount() {
+    return this.devices.filter(device => this.isUnavailable(device)).length;
+  }
+
+  get availableCount() {
+    return this.deviceCount - this.unavailableCount;
+  }
+
+  get unassignedCount() {
+    return this.areaGroups.find(area => area.area_id === 'unassigned')?.devices.length ?? 0;
+  }
+
+  get operationalLabel() {
+    if (!this.deviceCount) return 'Esperando dispositivos';
+    if (this.unavailableCount) return 'Atención requerida';
+    return 'Todo operativo';
+  }
+
+  get operationalDetail() {
+    if (!this.deviceCount) return 'La información aparecerá al detectar entidades';
+    if (this.unavailableCount === 1) return '1 dispositivo no está disponible';
+    if (this.unavailableCount > 1) return `${this.unavailableCount} dispositivos no están disponibles`;
+    return `${this.availableCount} dispositivos reportando normalmente`;
   }
 
   constructor(
@@ -96,8 +135,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.realtime.connect();
     this.unsubscribeWS = this.realtime.onUpdate((update) => this.applyUpdate(update));
+    this.unsubscribeAreaWS = this.realtime.onAreaRegistryUpdate(() => this.refreshDashboardData());
     this.loadInitial();
     this.startFallbackPolling();
+    this.startOutdoorPolling();
   }
 
   public loadInitial() {
@@ -107,6 +148,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     forkJoin({
       latest: this.telemetry.getLatest(),
       areas: this.devicesService.getGroupedByArea().pipe(catchError(() => of([]))),
+      outdoor: this.telemetry.getOutdoorWeather().pipe(catchError(() => of(this.outdoorWeather))),
     }).pipe(
       timeout(8000),
       retry({
@@ -122,9 +164,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       finalize(() => {
         this.isInitialLoading = false;
       })
-    ).subscribe(({ latest, areas }) => {
+    ).subscribe(({ latest, areas, outdoor }) => {
       this.areaCatalog = areas ?? [];
       this.devices = latest;
+      this.outdoorWeather = outdoor;
       this.lastUpdate = new Date();
       this.loadError = false;
     });
@@ -137,7 +180,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       exhaustMap(() => {
         this.isRefreshing = true;
 
-        return this.telemetry.getLatest().pipe(
+        return forkJoin({
+          latest: this.telemetry.getLatest(),
+          areas: this.devicesService.getGroupedByArea().pipe(catchError(() => of(this.areaCatalog))),
+        }).pipe(
           timeout(8000),
           catchError(() => EMPTY),
           finalize(() => {
@@ -147,9 +193,19 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     ).subscribe(data => {
       if (data) {
-        this.mergeDevices(data);
+        this.areaCatalog = data.areas;
+        this.mergeDevices(data.latest);
         this.lastUpdate = new Date();
       }
+    });
+  }
+
+  private startOutdoorPolling() {
+    timer(300000, 300000).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      exhaustMap(() => this.telemetry.getOutdoorWeather().pipe(catchError(() => EMPTY))),
+    ).subscribe(weather => {
+      if (weather) this.outdoorWeather = weather;
     });
   }
 
@@ -207,9 +263,20 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   manualRefresh() {
     if (this.isRefreshing || this.isInitialLoading) return;
+    this.refreshDashboardData(true);
+  }
+
+  private refreshDashboardData(includeOutdoor = false) {
+    if (this.isRefreshing || this.isInitialLoading) return;
     this.isRefreshing = true;
 
-    this.telemetry.getLatest().pipe(
+    forkJoin({
+      latest: this.telemetry.getLatest(),
+      areas: this.devicesService.getGroupedByArea().pipe(catchError(() => of(this.areaCatalog))),
+      outdoor: includeOutdoor
+        ? this.telemetry.getOutdoorWeather().pipe(catchError(() => of(this.outdoorWeather)))
+        : of(this.outdoorWeather),
+    }).pipe(
       timeout(6000),
       catchError(() => EMPTY),
       finalize(() => {
@@ -217,7 +284,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
       })
     ).subscribe(data => {
       if (data) {
-        this.mergeDevices(data);
+        this.areaCatalog = data.areas;
+        this.outdoorWeather = data.outdoor;
+        this.mergeDevices(data.latest);
         this.lastUpdate = new Date();
       }
     });
@@ -231,7 +300,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   isOnState(rawState: string): boolean {
-    return ['on', 'open', 'unlocked', 'unavailable'].includes(rawState.toLowerCase());
+    return ['on', 'open', 'unlocked', 'active', 'detected', 'home'].includes(rawState.toLowerCase());
+  }
+
+  isUnavailable(device: TelemetryLatest): boolean {
+    return ['unavailable', 'unknown', 'null', 'sin datos', ''].includes((device.raw_state ?? '').toLowerCase());
   }
 
   isSwitchDevice(deviceType: string): boolean {
@@ -243,6 +316,167 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const entityId = device.entity_id.toLowerCase();
     const deviceName = device.device_name.toLowerCase();
     return device.device_type.toLowerCase() === 'lock' || entityId.includes('puerta') || deviceName.includes('puerta');
+  }
+
+  isLegacyOutdoorWeather(device: TelemetryLatest): boolean {
+    return device.entity_id.toLowerCase().startsWith('weather.')
+      || device.device_name.toLowerCase().includes('exterior');
+  }
+
+  getWeatherMetric(devices: TelemetryLatest[], attribute: WeatherAttribute): TelemetryLatest | undefined {
+    return devices.find(device => device.entity_id.toLowerCase().endsWith(`::attr::${attribute}`));
+  }
+
+  getWeatherValue(devices: TelemetryLatest[], attribute: WeatherAttribute): string {
+    const metric = this.getWeatherMetric(devices, attribute);
+    if (!metric) return '—';
+    return `${this.getFriendlyValue(metric)}${this.cleanUnit(metric.unit) ? ` ${this.cleanUnit(metric.unit)}` : ''}`;
+  }
+
+  get interiorTemperature(): TelemetryLatest | undefined { return this.findInteriorMetric('temperature'); }
+  get interiorHumidity(): TelemetryLatest | undefined { return this.findInteriorMetric('humidity'); }
+
+  private findInteriorMetric(type: 'temperature' | 'humidity'): TelemetryLatest | undefined {
+    return this.devices
+      .filter(device => device.device_type.toLowerCase() === type && !this.isLegacyOutdoorWeather(device))
+      .sort((a, b) => this.interiorPriority(b) - this.interiorPriority(a))[0];
+  }
+
+  private interiorPriority(device: TelemetryLatest): number {
+    const text = `${device.entity_id} ${device.device_name}`.toLowerCase();
+    if (text.includes('sonoff') || text.includes('snzb')) return 30;
+    if (text.includes('laboratorio') || text.includes('lab')) return 20;
+    return 0;
+  }
+
+  isClimateDevice(device: TelemetryLatest): boolean {
+    return this.isLegacyOutdoorWeather(device)
+      || device.device_id === this.interiorTemperature?.device_id
+      || device.device_id === this.interiorHumidity?.device_id;
+  }
+
+  formatWeatherValue(value: number | null, unit: string): string {
+    if (value === null || value === undefined) return '—';
+    return `${new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 }).format(value)} ${unit}`;
+  }
+
+  get weatherConditionLabel(): string {
+    const labels: Record<string, string> = {
+      'clear-night': 'Noche despejada', cloudy: 'Nublado', fog: 'Niebla', hail: 'Granizo',
+      lightning: 'Tormenta eléctrica', 'lightning-rainy': 'Tormenta con lluvia',
+      partlycloudy: 'Parcialmente nublado', pouring: 'Lluvia intensa', rainy: 'Lluvia',
+      snowy: 'Nieve', 'snowy-rainy': 'Aguanieve', sunny: 'Soleado', windy: 'Ventoso',
+      'windy-variant': 'Ventoso y nublado',
+    };
+    const condition = this.outdoorWeather.condition.toLowerCase();
+    if (labels[condition]) return labels[condition];
+    if (!this.outdoorWeather.is_day) return 'Noche';
+
+    const cloudCoverage = this.outdoorWeather.cloud_coverage;
+    if (cloudCoverage === null || cloudCoverage === undefined) return 'Condiciones exteriores';
+    if (cloudCoverage >= 85) return 'Muy nublado';
+    if (cloudCoverage >= 60) return 'Nublado';
+    if (cloudCoverage >= 30) return 'Parcialmente nublado';
+    return 'Cielo despejado';
+  }
+
+  get weatherConditionIcon(): string {
+    if (!this.outdoorWeather.is_day) return 'fa-moon';
+    if (this.isStormyWeather) return 'fa-cloud-bolt';
+    if (this.isRainyWeather) return 'fa-cloud-rain';
+    if (this.outdoorWeather.condition === 'sunny') return 'fa-sun';
+    return 'fa-cloud-sun';
+  }
+
+  get isRainyWeather(): boolean {
+    return ['rainy', 'pouring', 'lightning-rainy', 'snowy-rainy'].includes(this.outdoorWeather.condition.toLowerCase());
+  }
+
+  get isStormyWeather(): boolean {
+    return ['lightning', 'lightning-rainy'].includes(this.outdoorWeather.condition.toLowerCase());
+  }
+
+  get isCloudyWeather(): boolean {
+    return ['cloudy', 'partlycloudy', 'windy-variant', 'rainy', 'pouring', 'lightning', 'lightning-rainy'].includes(this.outdoorWeather.condition.toLowerCase());
+  }
+
+  get windDirection(): string {
+    const bearing = this.outdoorWeather.wind_direction;
+    if (bearing === null || bearing === undefined) return '—';
+    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+    return directions[Math.round(bearing / 45) % 8];
+  }
+
+  isPowerDevice(device: TelemetryLatest): boolean {
+    const unit = this.cleanUnit(device.unit).toLowerCase();
+    return ['power', 'energy', 'plug'].includes(device.device_type.toLowerCase())
+      || ['w', 'kw', 'wh', 'kwh'].includes(unit);
+  }
+
+  isBatteryDevice(device: TelemetryLatest): boolean {
+    return device.entity_id.toLowerCase().includes('battery');
+  }
+
+  getDeviceContext(device: TelemetryLatest): string {
+    const entityId = device.entity_id.toLowerCase();
+    if (this.isPowerDevice(device)) return 'Consumo actual';
+    if (entityId.includes('apparent_temperature')) return 'Sensación térmica';
+    if (entityId.includes('dew_point')) return 'Punto de rocío';
+    if (entityId.includes('cloud_coverage')) return 'Cobertura de nubes';
+    if (entityId.includes('uv_index')) return 'Índice UV';
+    if (entityId.includes('wind_gust')) return 'Ráfagas de viento';
+    if (entityId.includes('wind_speed')) return 'Velocidad del viento';
+    if (entityId.includes('wind_bearing')) return 'Dirección del viento';
+    if (entityId.includes('pressure')) return 'Presión atmosférica';
+    if (entityId.includes('visibility')) return 'Visibilidad exterior';
+    if (device.device_type.toLowerCase() === 'temperature') return 'Temperatura';
+    if (device.device_type.toLowerCase() === 'humidity') return 'Humedad';
+    if (this.isBatteryDevice(device)) return 'Nivel de batería';
+    if (device.device_type.toLowerCase() === 'device_tracker') return 'Ubicación';
+    if (this.isAccessDevice(device)) return 'Control de acceso';
+    return 'Estado actual';
+  }
+
+  getFriendlyValue(device: TelemetryLatest): string {
+    if (device.value !== null) return new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 }).format(device.value);
+    if (device.raw_state === 'not_home') return 'Fuera';
+    if (device.raw_state === 'home') return 'Presente';
+    if (device.raw_state === 'discharging') return 'En uso';
+    if (device.raw_state === 'charging') return 'Cargando';
+    if (device.raw_state === 'none') return 'Sin cargador';
+    return this.getStateLabel(device);
+  }
+
+  cleanUnit(unit: string | null): string {
+    return (unit ?? '').replace('Â°C', '°C');
+  }
+
+  getDisplayName(name: string): string {
+    return name
+      .replace(/\s*\((simulado|simulada)\)\s*/gi, '')
+      .replace(/^Forecast Casa\s*-\s*/i, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  getStateLabel(device: TelemetryLatest): string {
+    if (this.isUnavailable(device)) return 'NO DISPONIBLE';
+
+    const state = device.raw_state.toLowerCase();
+    const type = device.device_type.toLowerCase();
+
+    if (type === 'lock') return state === 'unlocked' ? 'DESBLOQUEADA' : 'BLOQUEADA';
+    if (['door', 'window', 'binary_sensor'].includes(type) || this.isAccessDevice(device)) {
+      return this.isOnState(state) ? 'ABIERTA' : 'CERRADA';
+    }
+
+    return this.isOnState(state) ? 'ACTIVO' : 'INACTIVO';
+  }
+
+  getAreaStatus(area: DashboardArea): string {
+    const unavailable = area.devices.filter(device => this.isUnavailable(device)).length;
+    if (!unavailable) return 'Operativa';
+    return unavailable === 1 ? '1 sin conexión' : `${unavailable} sin conexión`;
   }
 
   openAccess(device: TelemetryLatest) {
@@ -260,6 +494,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (type === 'binary_sensor' || type === 'door' || type === 'window') return on ? 'fa-door-open' : 'fa-door-closed';
     if (type === 'temperature') return 'fa-temperature-half';
     if (type === 'humidity') return 'fa-droplet';
+    if (type === 'power' || type === 'energy' || type === 'plug') return 'fa-bolt';
+    if (type === 'device_tracker') return 'fa-location-dot';
+    if (type === 'weather') return 'fa-cloud-sun';
     if (type === 'sensor') return 'fa-gauge-high';
     if (type === 'light') return 'fa-lightbulb';
     return 'fa-microchip';
@@ -267,5 +504,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     this.unsubscribeWS?.();
+    this.unsubscribeAreaWS?.();
   }
 }

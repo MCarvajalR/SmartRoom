@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { TelemetryLatest, TelemetryRecord } from '../models/telemetry.model';
+import { OutdoorWeather, TelemetryLatest, TelemetryRecord, WeatherSummary } from '../models/telemetry.model';
 import { API_BASE_URL } from '../api.config';
 
 @Injectable({ providedIn: 'root' })
@@ -15,6 +15,14 @@ export class TelemetryService {
   // Con token de docente/admin: retorna según visibilidad
   getLatest() {
     return this.http.get<TelemetryLatest[]>(`${API_BASE_URL}/telemetry/latest`);
+  }
+
+  getWeatherSummary() {
+    return this.http.get<WeatherSummary>(`${API_BASE_URL}/telemetry/weather-summary`);
+  }
+
+  getOutdoorWeather() {
+    return this.http.get<OutdoorWeather>(`${API_BASE_URL}/telemetry/outdoor-weather`);
   }
 
   getHistory(deviceId?: number, limit = 100) {

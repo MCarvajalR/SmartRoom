@@ -1,5 +1,5 @@
 """
-Simulador de consumo energético para desarrollo y demostraciones.
+Simulador de consumo energético para desarrollo local.
 
 El dispositivo se identifica explícitamente como simulador y puede
 reemplazarse por un sensor real de Home Assistant sin cambiar la vista.
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.device import Device
 from app.models.telemetry import TelemetryRecord
+from app.services.area_service import ensure_local_areas
 
 ENTITY_ID = "simulator.power_laboratorio"
 DEVICE_NAME = "Consumo energético del laboratorio (Simulado)"
@@ -45,6 +46,7 @@ async def get_state() -> dict:
 
 async def ensure_energy_simulator(db: AsyncSession) -> Device:
     """Crea el dispositivo y un historial inicial si todavía no existen."""
+    await ensure_local_areas(db, {"laboratorio"}, {"laboratorio": "Laboratorio"})
     result = await db.execute(select(Device).where(Device.entity_id == ENTITY_ID))
     device = result.scalar_one_or_none()
 

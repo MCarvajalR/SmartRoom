@@ -92,6 +92,54 @@
   }
 }
 
+:host-context([data-theme="light"]) {
+  .btn-ha,
+  .theme-toggle {
+    background: #f9f8f5;
+  }
+
+  .profile-button {
+    background: #cedcd8;
+  }
+
+  .btn-ha,
+  .theme-toggle,
+  .profile-button {
+    position: relative;
+    isolation: isolate;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(40, 37, 29, 0.08);
+  }
+
+  .account-dropdown {
+    background: #f9f8f5;
+  }
+}
+
+:host-context([data-theme="dark"]) {
+  .btn-ha,
+  .theme-toggle {
+    background: #1c1b19;
+  }
+
+  .profile-button {
+    background: #313b3b;
+  }
+
+  .btn-ha,
+  .theme-toggle,
+  .profile-button {
+    position: relative;
+    isolation: isolate;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  }
+
+  .account-dropdown {
+    background: #1c1b19;
+  }
+}
+
 .account-menu {
   position: relative;
 }

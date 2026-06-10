@@ -20,6 +20,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.models.device import Device
 from app.models.telemetry import TelemetryRecord
+from app.services import ha_client
 
 logger = logging.getLogger(__name__)
 
@@ -178,10 +179,9 @@ async def process_entity_registry_update(data: dict) -> None:
         return
 
     async with AsyncSessionLocal() as db:
-        if action == "create":
+        if action in ("create", "update"):
             result = await db.execute(select(Device).where(Device.entity_id == entity_id))
-            if result.scalar_one_or_none():
-                return
+            existing = result.scalar_one_or_none()
 
             try:
                 async with httpx.AsyncClient() as client:
@@ -194,11 +194,36 @@ async def process_entity_registry_update(data: dict) -> None:
             except Exception:
                 attrs = {}
 
+            entity_area_map = await ha_client.get_entities_with_areas()
+            suggested_area_id = entity_area_map.get(entity_id)
+            accepted_area_ids: set[str] = set()
+            if suggested_area_id:
+                from app.services.area_service import ensure_local_areas
+                accepted_area_ids = await ensure_local_areas(db, {suggested_area_id})
+
+            accepted_area_id = (
+                suggested_area_id if suggested_area_id in accepted_area_ids else None
+            )
+
+            if existing:
+                changed = False
+                if accepted_area_id and existing.area_id != accepted_area_id:
+                    existing.area_id = accepted_area_id
+                    changed = True
+                if not existing.is_active:
+                    existing.is_active = True
+                    changed = True
+                if changed:
+                    await db.commit()
+                    logger.info("[REGISTRY] Dispositivo actualizado: %s", entity_id)
+                return
+
             device = Device(
                 entity_id=entity_id,
                 name=attrs.get("friendly_name", entity_id),
                 device_type=TYPE_MAP.get(attrs.get("device_class", ""), entity_id.split(".")[0]),
                 unit=attrs.get("unit_of_measurement"),
+                area_id=accepted_area_id,
                 visibility="public",
                 is_active=True,
             )
@@ -219,6 +244,17 @@ async def process_entity_registry_update(data: dict) -> None:
                 await db.delete(device)
                 await db.commit()
                 logger.info("[REGISTRY] Dispositivo eliminado: %s", entity_id)
+
+
+async def process_area_registry_update() -> None:
+    """Refresca el cache local cuando Home Assistant cambia sus areas."""
+    from app.services.area_service import sync_areas_from_ha
+
+    async with AsyncSessionLocal() as db:
+        await sync_areas_from_ha(db)
+        await db.commit()
+
+    await broadcast_to_frontend({"type": "area_registry_update"})
 
 
 async def start_ha_listener() -> None:
@@ -266,6 +302,13 @@ async def start_ha_listener() -> None:
                 }))
                 json.loads(await ha_ws.recv())
 
+                await ha_ws.send(json.dumps({
+                    "id": 3,
+                    "type": "subscribe_events",
+                    "event_type": "area_registry_updated",
+                }))
+                json.loads(await ha_ws.recv())
+
                 async for raw in ha_ws:
                     try:
                         msg = json.loads(raw)
@@ -278,6 +321,8 @@ async def start_ha_listener() -> None:
                             await process_state_change(event_data)
                         elif event_type == "entity_registry_updated":
                             await process_entity_registry_update(event_data)
+                        elif event_type == "area_registry_updated":
+                            await process_area_registry_update()
 
                     except Exception as e:
                         logger.warning("Error procesando evento HA: %s", e)

@@ -25,6 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_db
 from app.models.device import Device
 from app.services import ha_client
+from app.services.area_service import ensure_local_areas
 from app.services.device_sync import sync_devices_from_ha
 
 router = APIRouter()
@@ -120,23 +121,8 @@ async def discover_ha_entities(db: AsyncSession = Depends(get_db)):
         attrs = s.get("attributes", {})
 
         if eid.startswith("weather."):
-            for attribute, sensor_meta in ha_client.WEATHER_ATTRIBUTE_SENSORS.items():
-                raw_value = attrs.get(attribute)
-                if raw_value is None:
-                    continue
-
-                virtual_entity_id = ha_client.build_attribute_entity_id(eid, attribute)
-                discovered.append(
-                    DiscoveredEntity(
-                        entity_id=virtual_entity_id,
-                        friendly_name=f"{attrs.get('friendly_name', eid)} - {sensor_meta['label']}",
-                        state=str(raw_value),
-                        unit=attrs.get(f"{attribute}_unit") or sensor_meta["unit"],
-                        device_class=sensor_meta["device_type"],
-                        area_id=entity_area_map.get(eid),
-                        already_registered=virtual_entity_id in registered,
-                    )
-                )
+            # El clima se representa como una tarjeta compuesta. Sus atributos
+            # virtuales se sincronizan internamente y no son dispositivos editables.
             continue
 
         discovered.append(
@@ -186,6 +172,10 @@ async def import_discovered_devices(
         # Obtener entity_ids existentes
         result = await db.execute(select(Device.entity_id))
         existing_entity_ids = {row[0] for row in result.fetchall()}
+        accepted_area_ids = await ensure_local_areas(
+            db,
+            {entity.area_id for entity in body.entities if entity.area_id},
+        )
 
         created = []
         skipped = []
@@ -212,7 +202,7 @@ async def import_discovered_devices(
                     name=e.name or e.entity_id,
                     device_type=e.device_type or "other",
                     unit=e.unit,
-                    area_id=e.area_id,
+                    area_id=e.area_id if e.area_id in accepted_area_ids else None,
                     visibility=e.visibility or "public",
                     is_active=True,
                 )

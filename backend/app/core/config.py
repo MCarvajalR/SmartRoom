@@ -50,6 +50,7 @@ class Settings(BaseSettings):
     TELEMETRY_INTERVAL_SECONDS: int = 60
 
 
+
 # Instancia global de configuración (singleton)
 settings = Settings()
 

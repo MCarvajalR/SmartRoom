@@ -24,9 +24,19 @@ from app.models.device import Device
 from app.models.telemetry import TelemetryRecord
 from app.models.user import User
 from app.schemas.telemetry import TelemetryLatest, TelemetryResponse
-from app.services import telemetry_service
+from app.services import ha_client, telemetry_service, weather_service
 
 router = APIRouter(prefix="/telemetry", tags=["Telemetría"])
+
+
+@router.get("/weather-summary", response_model=dict)
+async def get_weather_summary():
+    return await ha_client.get_weather_summary()
+
+
+@router.get("/outdoor-weather", response_model=dict)
+async def get_outdoor_weather():
+    return await weather_service.get_popayan_weather()
 
 
 @router.get("/latest", response_model=list[TelemetryLatest])

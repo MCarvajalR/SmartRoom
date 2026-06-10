@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.device import Device
 from app.services import ha_client
+from app.services.area_service import ensure_local_areas
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,22 @@ async def sync_devices_from_ha(db: AsyncSession) -> dict:
         ha_devices = await ha_client.get_discovered_devices()
         ha_map = {item["entity_id"]: item for item in ha_devices if item.get("entity_id")}
 
+        suggested_names = {}
+        try:
+            suggested_names = {
+                area["area_id"]: area["name"]
+                for area in await ha_client.get_areas()
+                if area.get("area_id") and area.get("name")
+            }
+        except Exception:
+            logger.warning("No fue posible obtener nombres de areas de HA.")
+
+        accepted_area_ids = await ensure_local_areas(
+            db,
+            {item["area_id"] for item in ha_devices if item.get("area_id")},
+            suggested_names,
+        )
+
         # Obtener dispositivos de la base de datos
         result = await db.execute(select(Device))
         db_devices = result.scalars().all()
@@ -67,7 +84,11 @@ async def sync_devices_from_ha(db: AsyncSession) -> dict:
                         name=payload.get("name") or entity_id,
                         device_type=payload.get("device_type") or "other",
                         unit=payload.get("unit"),
-                        area_id=payload.get("area_id"),
+                        area_id=(
+                            payload.get("area_id")
+                            if payload.get("area_id") in accepted_area_ids
+                            else None
+                        ),
                         visibility="public",
                         is_active=True,
                     )
@@ -75,15 +96,12 @@ async def sync_devices_from_ha(db: AsyncSession) -> dict:
                 created += 1
                 continue
 
-            # Dispositivo existente: conservar metadatos administrados localmente.
-            # Home Assistant sigue siendo la fuente para el área y la presencia,
-            # pero no debe deshacer nombre, tipo o unidad editados por un admin.
+            # Dispositivo existente: HA solo completa/corrige el area cuando reporta una valida.
             changed = False
 
-            new_area = payload.get("area_id")
-
-            if existing.area_id != new_area:
-                existing.area_id = new_area
+            suggested_area_id = payload.get("area_id")
+            if suggested_area_id in accepted_area_ids and existing.area_id != suggested_area_id:
+                existing.area_id = suggested_area_id
                 changed = True
 
             # Reactivar si estaba inactivo

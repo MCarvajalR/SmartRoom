@@ -1,120 +1,98 @@
 <div class="dashboard">
-  <div class="page-header">
-    <div class="dashboard-heading">
-      <h2>Panel de Monitoreo</h2>
-      <span class="rt-badge" [ngClass]="'rt-' + realtime.status()">
-        <span class="rt-dot"></span>
-        {{ rtLabel() }}
-      </span>
-      <span class="last-update">
-        @if (lastUpdate) { Última actualización: {{ lastUpdate | date:'HH:mm:ss' }} }
-      </span>
+  <header class="page-header">
+    <div class="header-content">
+      <h1>Panel de Monitoreo</h1>
+      <p>{{ logicalDeviceCount }} dispositivos en {{ areaCount }} áreas monitoreadas</p>
+      <div class="header-actions">
+        <span class="rt-badge" [ngClass]="'rt-' + realtime.status()"><span class="rt-dot"></span>{{ rtLabel() }}</span>
+        @if (lastUpdate) { <span class="last-update">Actualizado {{ lastUpdate | date:'HH:mm:ss' }}</span> }
+        @if (realtime.status() !== 'connected') {
+          <button class="btn-refresh" (click)="manualRefresh()" [disabled]="isRefreshing"><i class="fas fa-sync-alt" [class.fa-spin]="isRefreshing"></i> Refrescar</button>
+        }
+      </div>
     </div>
-
-    @if (realtime.status() !== 'connected') {
-      <button class="btn-refresh" (click)="manualRefresh()" [disabled]="isRefreshing">
-        <i class="fas fa-sync-alt" [class.fa-spin]="isRefreshing"></i>
-        <span>{{ isRefreshing ? 'Actualizando...' : 'Refrescar' }}</span>
-      </button>
-    }
-
-  </div>
-
-  <div class="summary-strip">
-    <div class="summary-item">
-      <span class="summary-value">{{ deviceCount }}</span>
-      <span class="summary-label">Dispositivos</span>
-    </div>
-    <div class="summary-item">
-      <span class="summary-value">{{ areaCount }}</span>
-      <span class="summary-label">Áreas</span>
-    </div>
-  </div>
-
-  <div class="areas-title">
-    <span>Áreas monitoreadas</span>
-  </div>
-
-  @if (isInitialLoading && devices.length === 0) {
-    <div class="areas-grid">
-      @for (i of [1,2,3]; track i) {
-        <section class="area-panel skeleton-panel">
-          <div class="area-header">
-            <div>
-              <span class="area-eyebrow">Área</span>
-              <h3>Cargando</h3>
-            </div>
-          </div>
-          <div class="metrics-grid">
-            <div class="metric-card skeleton"></div>
-            <div class="metric-card skeleton"></div>
-          </div>
-        </section>
-      }
-    </div>
-  }
+  </header>
 
   @if (loadError && !isInitialLoading && devices.length === 0) {
-    <div class="load-error">
-      <i class="fas fa-exclamation-triangle"></i>
-      <p>No se pudo conectar al servidor.</p>
-      <button class="btn-refresh inline" (click)="loadInitial()">Reintentar</button>
-    </div>
+    <div class="load-error"><i class="fas fa-exclamation-triangle"></i><p>No se pudo conectar al servidor.</p><button class="btn-refresh" (click)="loadInitial()">Reintentar</button></div>
   }
+
+  <div class="dashboard-layout">
+  <aside class="climate-grid">
+    <section class="weather-card outdoor-card">
+      <div class="weather-scene" [class.scene-night]="!outdoorWeather.is_day" [class.scene-rain]="isRainyWeather" [class.scene-storm]="isStormyWeather" [class.scene-cloudy]="isCloudyWeather">
+        <span class="celestial"><i class="fas" [ngClass]="weatherConditionIcon"></i></span>
+        <span class="cloud cloud-one"></span><span class="cloud cloud-two"></span>
+        @if (isRainyWeather) {
+          <span class="rain rain-one"></span><span class="rain rain-two"></span><span class="rain rain-three"></span><span class="rain rain-four"></span><span class="rain rain-five"></span>
+        }
+      </div>
+      <div class="weather-main">
+        <div class="weather-heading">
+          <span>Clima exterior · {{ outdoorWeather.location }}</span>
+          <h2>{{ weatherConditionLabel }}</h2>
+        </div>
+        <div class="weather-temperature">
+          <strong>{{ formatWeatherValue(outdoorWeather.temperature, '°C') }}</strong>
+          <span>Humedad {{ formatWeatherValue(outdoorWeather.humidity, '%') }}</span>
+        </div>
+        <div class="weather-details">
+          <div><i class="fas fa-cloud"></i><span>Nubes</span><strong>{{ formatWeatherValue(outdoorWeather.cloud_coverage, '%') }}</strong></div>
+          <div><i class="fas fa-wind"></i><span>Viento {{ windDirection }}</span><strong>{{ formatWeatherValue(outdoorWeather.wind_speed, 'km/h') }}</strong></div>
+          <div><i class="fas fa-gauge-high"></i><span>Presión</span><strong>{{ formatWeatherValue(outdoorWeather.pressure, 'hPa') }}</strong></div>
+          <div><i class="fas fa-temperature-half"></i><span>Sensación</span><strong>{{ formatWeatherValue(outdoorWeather.apparent_temperature, '°C') }}</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="weather-card indoor-card">
+      <div class="indoor-scene"><span class="indoor-orb"></span><i class="fas fa-house-chimney"></i></div>
+      <div class="weather-main">
+        <div class="weather-heading">
+          <span>Clima interior · Laboratorio</span>
+          <h2>Ambiente del laboratorio</h2>
+        </div>
+        <div class="weather-temperature">
+          <strong>{{ interiorTemperature ? getFriendlyValue(interiorTemperature) + ' ' + cleanUnit(interiorTemperature.unit) : '—' }}</strong>
+          <span>Humedad {{ interiorHumidity ? getFriendlyValue(interiorHumidity) + ' ' + cleanUnit(interiorHumidity.unit) : '—' }}</span>
+        </div>
+        <div class="weather-details indoor-details">
+          <div><i class="fas fa-temperature-half"></i><span>Sensor</span><strong>{{ interiorTemperature?.device_name || 'Esperando sensor' }}</strong></div>
+          <div><i class="fas fa-droplet"></i><span>Humedad</span><strong>{{ interiorHumidity ? getFriendlyValue(interiorHumidity) + ' ' + cleanUnit(interiorHumidity.unit) : '—' }}</strong></div>
+          <div><i class="fas fa-wifi"></i><span>Conexión</span><strong>{{ interiorTemperature && !isUnavailable(interiorTemperature) ? 'Disponible' : 'Sin datos' }}</strong></div>
+          <div><i class="fas fa-clock"></i><span>Actualizado</span><strong>{{ interiorTemperature?.recorded_at | date:'HH:mm:ss' }}</strong></div>
+        </div>
+      </div>
+    </section>
+  </aside>
 
   <div class="areas-grid">
     @for (area of areaGroups; track area.area_id) {
-      <section class="area-panel">
+      <section class="area-panel" [class.unassigned-panel]="area.area_id === 'unassigned'">
         <div class="area-header">
-          <div>
-            <span class="area-eyebrow">Área</span>
-            <h3>{{ area.area_name }}</h3>
+          <div class="area-title">
+            <span class="area-symbol"><i class="fas" [ngClass]="area.area_id === 'unassigned' ? 'fa-box-open' : 'fa-flask'"></i></span>
+            <div><span>{{ area.area_id === 'unassigned' ? 'Pendientes de organización' : 'Área' }}</span><h2>{{ area.area_name }}</h2></div>
           </div>
-          <span class="area-count">{{ area.devices.length }}</span>
         </div>
-
         <div class="metrics-grid">
+          @if (area.devices.length === 0) {
+            <div class="empty-area"><i class="fas fa-plus"></i><span>Área lista para recibir dispositivos</span></div>
+          }
           @for (d of area.devices; track d.device_id) {
-            <div
-              class="metric-card"
-              [ngClass]="['type-' + d.device_type, isOnState(d.raw_state) ? 'state-on' : 'state-off']"
-              [class.updated]="recentlyUpdated.has(d.device_id)"
-              [class.access-card]="isAccessDevice(d)"
-              [attr.role]="isAccessDevice(d) ? 'button' : null"
-              [attr.tabindex]="isAccessDevice(d) ? 0 : null"
-              [attr.aria-label]="isAccessDevice(d) ? 'Ir a control de acceso' : null"
-              (click)="openAccess(d)"
-              (keydown.enter)="openAccess(d)"
-              (keydown.space)="openAccess(d)">
-              <div class="card-header">
-                <span class="device-name">{{ d.device_name }}</span>
-                <i class="fas" [ngClass]="getDeviceIcon(d.device_type, d.raw_state)"></i>
+            <article class="metric-card" [ngClass]="['type-' + d.device_type, isUnavailable(d) ? 'state-unavailable' : 'state-ready']" [class.updated]="recentlyUpdated.has(d.device_id)" [class.access-card]="isAccessDevice(d)" [attr.role]="isAccessDevice(d) ? 'button' : null" [attr.tabindex]="isAccessDevice(d) ? 0 : null" (click)="openAccess(d)" (keydown.enter)="openAccess(d)">
+              <div class="visual-icon"><i class="fas" [ngClass]="getDeviceIcon(d.device_type, d.raw_state)"></i></div>
+              <div class="metric-content">
+                <span class="metric-context">{{ getDeviceContext(d) }}</span>
+                <h3>{{ getDisplayName(d.device_name) }}</h3>
+                <div class="metric-value"><strong>{{ getFriendlyValue(d) }}</strong>@if (d.value !== null && cleanUnit(d.unit)) { <span>{{ cleanUnit(d.unit) }}</span> }</div>
+                <div class="metric-meta"><span><i class="fas fa-clock"></i> {{ d.recorded_at | date:'HH:mm' }}</span>@if (isAccessDevice(d)) { <span class="access-hint">Gestionar <i class="fas fa-arrow-right"></i></span> }</div>
               </div>
-
-              <div class="card-body">
-                @if (isSwitchDevice(d.device_type)) {
-                  <div class="status-badge">
-                    <span class="status-text">{{ isOnState(d.raw_state) ? 'ABIERTA' : 'CERRADA' }}</span>
-                  </div>
-                } @else {
-                  <div class="numeric-value">
-                    <span class="value-num">{{ d.value | number:'1.1-1' }}</span>
-                    <span class="value-unit">{{ d.unit ?? '' }}</span>
-                  </div>
-                }
-              </div>
-
-              <div class="card-footer">
-                <span class="entity-id" [title]="d.entity_id">{{ d.entity_id }}</span>
-                @if (isAccessDevice(d)) {
-                  <span class="access-hint">Ver acceso</span>
-                }
-                <span class="record-time">{{ d.recorded_at | date:'HH:mm:ss' }}</span>
-              </div>
-            </div>
+            </article>
           }
         </div>
       </section>
     }
+  </div>
   </div>
 </div>

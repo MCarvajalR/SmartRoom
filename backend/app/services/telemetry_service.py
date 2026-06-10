@@ -68,9 +68,11 @@ async def collect_all(db: AsyncSession | None = None) -> int:
 
         # Request paralelo a HA para todos los dispositivos
         tasks = [
-            energy_simulator.get_state()
-            if device.entity_id == energy_simulator.ENTITY_ID
-            else ha_client.get_state(device.entity_id)
+            (
+                energy_simulator.get_state()
+                if device.entity_id == energy_simulator.ENTITY_ID
+                else ha_client.get_state(device.entity_id)
+            )
             for device in devices
         ]
         states_data = await asyncio.gather(*tasks)

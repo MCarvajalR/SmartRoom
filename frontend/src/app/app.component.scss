@@ -1,105 +1,32 @@
 :host {
-  // Paleta de colores extraída del objetivo "Tech"
-  --bg-main: #f1f5f9;       // Gris azulado muy claro (fondo de la página)
-  --bg-sidebar: #1a2233;    // Azul Navy profundo (Sidebar)
-  --text-primary: #1e293b;  // Gris pizarra oscuro (para letras legibles)
-  --text-secondary: #64748b;// Gris medio (para textos menos importantes)
-  --accent-cyan: #00bfff;   // Cyan eléctrico (iconos y selecciones)
-  --white: #ffffff;         // Para las tarjetas (Cards)
+  display: block;
+  height: 100dvh;
+  overflow: hidden;
 }
 
-// Contenedor principal que organiza el layout
 .main-wrapper {
   display: flex;
-  min-height: 100vh;
   width: 100%;
-  /* Eliminamos cualquier fondo blanco que pueda venir por defecto */
-  background: transparent; 
-}
-
-// Estilos del Sidebar
-.sidebar {
-  width: 260px;
-  min-height: 100vh; // Garantiza que el color llegue hasta el fondo
-  background-color: #1a2233; // El azul Navy solicitado
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
-  box-sizing: border-box;
-  
-  // Evita que el sidebar se encoja si el contenido principal es muy grande
-  flex-shrink: 0;
-
-  h2 {
-    margin-bottom: 30px;
-    font-size: 1.5rem;
-    letter-spacing: 1px;
-  }
-
-  ul {
-    list-style: none;
-    padding: 0;
-    
-    li {
-      margin-bottom: 15px;
-      
-      a {
-        color: rgba(255, 255, 255, 0.8);
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.3s ease;
-
-        &:hover {
-          color: #00bfff; // Color de énfasis al pasar el mouse
-        }
-      }
-    }
-  }
-}
-
-// Estilos del área donde cargan las páginas
-.app-content {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 40px;
-  min-height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   background: var(--color-bg);
-  color: var(--color-text);
-  font-family: 'Inter', sans-serif;
-  
-  // Esto asegura que cualquier texto dentro sea visible
-  h1, h2, h3, p, span, td, th {
-    color: var(--color-text);
-  }
-  /* ESTADO ESPECIAL PARA EL LOGIN */
-  &.login-mode {
-    padding: 0 !important;
-    background-color: #0f172a; // Aseguramos el fondo oscuro del login
-  }
-}
-
-.main-wrapper {
-  display: flex;          // Activa el modo fila
-  flex-direction: row;    // Asegura que sea horizontal
-  width: 100%;
-  min-height: 100vh;
-  align-items: stretch;   // Fuerza a que ambos hijos midan lo mismo de alto
-}
-
-.sidebar {
-  width: 260px;
-  flex-shrink: 0;         // CRÍTICO: Evita que el contenido derecho "aplane" a la barra lateral
-  background-color: #1a2233;
-  color: white;
-  min-height: 100vh;
 }
 
 .app-content {
-  flex-grow: 1;           // Hace que el dashboard ocupe todo el espacio restante a la derecha
-  background-color: var(--color-bg);
-  overflow-y: auto;       // Si el dashboard es muy largo, solo esta parte tendrá scroll
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  height: 100dvh;
+  padding: 0 28px 36px;
+  overflow-y: auto;
+  color: var(--color-text);
+  background: var(--color-bg);
+
+  &.login-mode {
+    padding: 0;
+    background: #0f172a;
+  }
 }
 
 .route-frame {
@@ -112,197 +39,14 @@
 }
 
 @keyframes routeFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@media (max-width: 1050px) {
+  .app-content { padding-inline: 22px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .route-frame.fade-route > :not(router-outlet) {
-    animation: none;
-  }
-}
-
-// Ajuste para separar Sidebar de Contenido
-.content-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-// Cabecera superior blanca
-.top-header {
-  background: #ffffff;
-  padding: 15px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.logout-btn {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: 600;
-  
-  &:hover { background: #c0392b; }
-}
-
-// Etiquetas de sección en el menú
-.menu-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.4);
-  margin: 20px 0 10px 10px;
-  letter-spacing: 1px;
-}
-
-// Separador para la sección de Admin
-.menu-separator {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.3);
-  margin: 25px 0 10px 15px;
-  letter-spacing: 1.5px;
-  font-weight: 700;
-}
-
-// Ajuste de los iconos dentro de los enlaces
-.sidebar-nav ul li a {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  color: rgba(255, 255, 255, 0.7);
-  text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  margin-bottom: 5px;
-
-  i {
-    margin-right: 12px;
-    width: 20px; // Ancho fijo para que el texto quede alineado
-    text-align: center;
-    font-size: 18px;
-  }
-
-  &:hover, &.active {
-    background: rgba(0, 191, 255, 0.1);
-    color: #00bfff;
-    
-    i { color: #00bfff; }
-  }
-}
-
-// Botón de logout al fondo
-.sidebar-footer {
-  margin-top: auto; // Empuja el botón al fondo del sidebar
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-
-  .btn-logout {
-    width: 100%;
-    background: none;
-    border: 1px solid rgba(231, 76, 60, 0.5);
-    color: #e74c3c;
-    padding: 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: background 0.3s;
-
-    &:hover {
-      background: rgba(231, 76, 60, 0.1);
-      border-color: #e74c3c;
-    }
-  }
-}
-
-// Títulos de sección dentro del menú
-.menu-header {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin: 25px 0 10px 15px;
-  list-style: none;
-}
-
-.sidebar-nav ul {
-  padding: 0;
-  margin: 0;
-  
-  li {
-    list-style: none;
-    
-    a {
-      display: flex;
-      align-items: center;
-      padding: 12px 20px;
-      color: rgba(255, 255, 255, 0.7);
-      text-decoration: none;
-      transition: all 0.2s ease;
-      border-radius: 0 25px 25px 0; // Efecto de pestaña moderna
-      margin-right: 15px;
-
-      i {
-        margin-right: 15px;
-        width: 20px;
-        text-align: center;
-      }
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: #fff;
-      }
-
-      &.active {
-        background: rgba(0, 191, 255, 0.15); // El azul de tu referencia
-        color: #00bfff;
-        border-left: 4px solid #00bfff;
-        font-weight: 600;
-        
-        i { color: #00bfff; }
-      }
-    }
-  }
-}
-
-.sidebar-footer {
-  margin-top: auto; // Empuja el botón al final
-  padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.btn-logout {
-  width: 100%;
-  padding: 10px;
-  background: transparent;
-  border: 1px solid #e74c3c;
-  color: #e74c3c;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #e74c3c;
-    color: white;
-  }
+  .route-frame.fade-route > :not(router-outlet) { animation: none; }
 }

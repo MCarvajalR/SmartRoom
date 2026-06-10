@@ -1,270 +1,296 @@
 :host {
-  // Paleta de colores extraída del objetivo "Tech"
-  --bg-main: #f1f5f9;       // Gris azulado muy claro (fondo de la página)
-  --bg-sidebar: #1a2233;    // Azul Navy profundo (Sidebar)
-  --text-primary: #1e293b;  // Gris pizarra oscuro (para letras legibles)
-  --text-secondary: #64748b;// Gris medio (para textos menos importantes)
-  --accent-cyan: #00bfff;   // Cyan eléctrico (iconos y selecciones)
-  --white: #ffffff;         // Para las tarjetas (Cards)
+  display: block;
+  flex: 0 0 238px;
+  width: 238px;
+  height: 100dvh;
+  transition: flex-basis 180ms ease, width 180ms ease;
 }
 
-// Contenedor principal que organiza el layout
-.main-wrapper {
-  display: flex;
-  min-height: 100vh;
-  background-color: var(--bg-main); // <-- Fondo gris claro
-}
-
-// Estilos del Sidebar
-.sidebar {
-  width: 260px;
-  min-height: 100vh; // Garantiza que el color llegue hasta el fondo
-  background-color: #1a2233; // El azul Navy solicitado
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  padding: 20px;
+:host,
+:host * {
   box-sizing: border-box;
-  
-  // Evita que el sidebar se encoja si el contenido principal es muy grande
-  flex-shrink: 0;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  color: #f3f7ff;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(0, 191, 255, 0.16), transparent 12rem),
+    linear-gradient(180deg, #19243a 0%, #131c2e 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 12px 0 36px rgba(4, 9, 20, 0.14);
+  transition: width 180ms ease;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 24px 16px 21px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+
+  .logo-mark {
+    display: grid;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border: 1px solid rgba(74, 203, 255, 0.28);
+    border-radius: 15px;
+    color: #5bd1ff;
+    background: rgba(0, 191, 255, 0.1);
+    font-size: 1.45rem;
+  }
 
   h2 {
-    margin-bottom: 30px;
-    font-size: 1.5rem;
-    letter-spacing: 1px;
+    margin: 0;
+    color: #fff;
+    font-size: 1.18rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
   }
+
+}
+
+.sidebar-toggle {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  margin-left: auto;
+  place-items: center;
+  border: 1px solid rgba(91, 209, 255, 0.2);
+  border-radius: 10px;
+  color: #9ee6ff;
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  transition: all 180ms ease;
+
+  &:hover {
+    color: #fff;
+    border-color: rgba(91, 209, 255, 0.45);
+    background: rgba(0, 191, 255, 0.14);
+  }
+}
+
+.sidebar-nav {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 10px 28px;
+  scrollbar-color: rgba(91, 209, 255, 0.35) transparent;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar { width: 5px; }
+  &::-webkit-scrollbar-track { background: transparent; }
+  &::-webkit-scrollbar-thumb { border-radius: 999px; background: rgba(91, 209, 255, 0.3); }
 
   ul {
-    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
     padding: 0;
-    
-    li {
-      margin-bottom: 15px;
-      
-      a {
-        color: rgba(255, 255, 255, 0.8);
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.3s ease;
-
-        &:hover {
-          color: #00bfff; // Color de énfasis al pasar el mouse
-        }
-      }
-    }
-  }
-}
-
-// Estilos del área donde cargan las páginas
-.app-content {
-  flex-grow: 1;
-  padding: 40px;
-  color: var(--text-primary); // <-- FORZAMOS que las letras sean OSCURAS
-  font-family: 'Inter', sans-serif;
-  
-  // Esto asegura que cualquier texto dentro sea visible
-  h1, h2, h3, p, span, td, th {
-    color: var(--text-primary);
-  }
-}
-
-.main-wrapper {
-  display: flex;          // Activa el modo fila
-  flex-direction: row;    // Asegura que sea horizontal
-  width: 100%;
-  min-height: 100vh;
-  align-items: stretch;   // Fuerza a que ambos hijos midan lo mismo de alto
-}
-
-.sidebar {
-  width: 260px;
-  flex-shrink: 0;         // CRÍTICO: Evita que el contenido derecho "aplane" a la barra lateral
-  background-color: #1a2233;
-  color: white;
-  min-height: 100vh;
-}
-
-.app-content {
-  flex-grow: 1;           // Hace que el dashboard ocupe todo el espacio restante a la derecha
-  background-color: #f4f7f6;
-  overflow-y: auto;       // Si el dashboard es muy largo, solo esta parte tendrá scroll
-}
-
-// Ajuste para separar Sidebar de Contenido
-.content-area {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-// Cabecera superior blanca
-.top-header {
-  background: #ffffff;
-  padding: 15px 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.logout-btn {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 8px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-weight: 600;
-  
-  &:hover { background: #c0392b; }
-}
-
-// Etiquetas de sección en el menú
-.menu-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  color: rgba(255,255,255,0.4);
-  margin: 20px 0 10px 10px;
-  letter-spacing: 1px;
-}
-
-// Separador para la sección de Admin
-.menu-separator {
-  font-size: 10px;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.3);
-  margin: 25px 0 10px 15px;
-  letter-spacing: 1.5px;
-  font-weight: 700;
-}
-
-// Ajuste de los iconos dentro de los enlaces
-.sidebar-nav ul li a {
-  display: flex;
-  align-items: center;
-  padding: 12px 15px;
-  color: rgba(255, 255, 255, 0.7);
-  text-decoration: none;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  margin-bottom: 5px;
-
-  i {
-    margin-right: 12px;
-    width: 20px; // Ancho fijo para que el texto quede alineado
-    text-align: center;
-    font-size: 18px;
+    list-style: none;
   }
 
-  &:hover, &.active {
-    background: rgba(0, 191, 255, 0.1);
-    color: #00bfff;
-    
-    i { color: #00bfff; }
-  }
-}
+  li { list-style: none; }
 
-// Botón de logout al fondo
-.sidebar-footer {
-  margin-top: auto; // Empuja el botón al fondo del sidebar
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-
-  .btn-logout {
-    width: 100%;
-    background: none;
-    border: 1px solid rgba(231, 76, 60, 0.5);
-    color: #e74c3c;
-    padding: 10px;
-    border-radius: 6px;
-    cursor: pointer;
+  a {
+    position: relative;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: background 0.3s;
+    gap: 12px;
+    min-height: 58px;
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid transparent;
+    border-radius: 15px;
+    color: rgba(232, 239, 251, 0.72);
+    font-size: 1rem;
+    font-weight: 650;
+    text-decoration: none;
+    transition: all 180ms ease;
+
+    i {
+      width: 25px;
+      color: rgba(162, 185, 218, 0.72);
+      font-size: 1.18rem;
+      text-align: center;
+      transition: color 180ms ease, transform 180ms ease;
+    }
 
     &:hover {
-      background: rgba(231, 76, 60, 0.1);
-      border-color: #e74c3c;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+      border-color: rgba(255, 255, 255, 0.06);
+      transform: translateX(2px);
+
+      i { color: #65d3ff; }
     }
-  }
-}
 
-// Títulos de sección dentro del menú
-.menu-header {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin: 25px 0 10px 15px;
-  list-style: none;
-}
-
-.sidebar-nav ul {
-  padding: 0;
-  margin: 0;
-  
-  li {
-    list-style: none;
-    
-    a {
-      display: flex;
-      align-items: center;
-      padding: 12px 20px;
-      color: rgba(255, 255, 255, 0.7);
-      text-decoration: none;
-      transition: all 0.2s ease;
-      border-radius: 0 25px 25px 0; // Efecto de pestaña moderna
-      margin-right: 15px;
+    &.active {
+      color: #fff;
+      background: linear-gradient(90deg, rgba(0, 191, 255, 0.24), rgba(0, 191, 255, 0.1));
+      border-color: rgba(87, 207, 255, 0.18);
+      box-shadow: inset 3px 0 #2ec9ff, 0 10px 24px rgba(3, 12, 28, 0.16);
 
       i {
-        margin-right: 15px;
-        width: 20px;
-        text-align: center;
-      }
-
-      &:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: #fff;
-      }
-
-      &.active {
-        background: rgba(0, 191, 255, 0.15); // El azul de tu referencia
-        color: #00bfff;
-        border-left: 4px solid #00bfff;
-        font-weight: 600;
-        
-        i { color: #00bfff; }
+        color: #4bd0ff;
+        transform: scale(1.06);
       }
     }
   }
+}
+
+.menu-separator {
+  padding: 23px 17px 8px;
+  color: rgba(185, 202, 228, 0.38);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .sidebar-footer {
-  margin-top: auto; // Empuja el botón al final
-  padding: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  width: auto;
+  padding: 16px 14px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(7, 13, 25, 0.2);
+  backdrop-filter: blur(12px);
 }
 
 .btn-logout {
-  width: 100%;
-  padding: 10px;
-  background: transparent;
-  border: 1px solid #e74c3c;
-  color: #e74c3c;
-  border-radius: 6px;
-  cursor: pointer;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transition: all 0.2s;
+  width: 100%;
+  min-width: 0;
+  max-width: 190px;
+  margin: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 103, 103, 0.34);
+  border-radius: 12px;
+  color: #ff7c7c;
+  background: rgba(255, 79, 79, 0.06);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 180ms ease;
 
   &:hover {
-    background: #e74c3c;
-    color: white;
+    color: #fff;
+    background: rgba(230, 70, 70, 0.82);
+    border-color: rgba(255, 134, 134, 0.8);
+    box-shadow: 0 10px 24px rgba(119, 20, 20, 0.22);
+    transform: translateY(-1px);
+  }
+}
+
+:host:has(.sidebar.collapsed) {
+  flex-basis: 76px;
+  width: 76px;
+}
+
+.sidebar.collapsed {
+  .sidebar-logo {
+    justify-content: center;
+    padding-inline: 10px;
+
+    h2 { display: none; }
+    .logo-mark { display: none; }
+  }
+
+  .sidebar-toggle {
+    margin-left: 0;
+  }
+
+  .sidebar-nav {
+    padding-inline: 9px;
+
+    a {
+      justify-content: center;
+      gap: 0;
+      padding-inline: 0;
+      font-size: 0;
+
+      i {
+        width: auto;
+        font-size: 1.22rem;
+      }
+
+      .nav-label { display: none; }
+    }
+  }
+
+  .menu-separator {
+    height: 1px;
+    margin: 14px 11px 8px;
+    padding: 0;
+    overflow: hidden;
+    background: rgba(185, 202, 228, 0.18);
+    color: transparent;
+  }
+
+  .sidebar-footer {
+    padding-inline: 10px;
+  }
+
+  .btn-logout {
+    gap: 0;
+    width: 44px;
+    margin-inline: auto;
+    padding-inline: 0;
+    font-size: 0;
+
+    i { font-size: 1rem; }
+    .nav-label { display: none; }
+  }
+}
+
+@media (max-width: 1050px) {
+  :host {
+    flex-basis: 210px;
+    width: 210px;
+  }
+
+  .sidebar-logo {
+    padding-inline: 13px;
+    h2 { font-size: 1.02rem; }
+  }
+  .sidebar-nav { padding-inline: 8px; }
+}
+
+@media (max-width: 760px) {
+  :host {
+    flex-basis: 76px;
+    width: 76px;
+  }
+
+  :host:has(.sidebar:not(.collapsed)) {
+    flex-basis: min(238px, 82vw);
+    width: min(238px, 82vw);
+  }
+
+  .sidebar:not(.collapsed) .sidebar-footer {
+    padding-inline: 14px;
+  }
+
+  .sidebar:not(.collapsed) .btn-logout {
+    width: 100%;
+    max-width: 190px;
+    margin-inline: 0;
   }
 }

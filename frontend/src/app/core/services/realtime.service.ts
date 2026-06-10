@@ -15,6 +15,12 @@ export interface RealtimeUpdate {
   visibility:  'public' | 'docente' | 'admin';
 }
 
+export interface AreaRegistryUpdate {
+  type: 'area_registry_update';
+}
+
+type RealtimeMessage = RealtimeUpdate | AreaRegistryUpdate;
+
 @Injectable({ providedIn: 'root' })
 export class RealtimeService {
   // Signal público: 'connecting' | 'connected' | 'disconnected'
@@ -22,6 +28,7 @@ export class RealtimeService {
 
   private ws: WebSocket | null = null;
   private handlers: Array<(u: RealtimeUpdate) => void> = [];
+  private areaHandlers: Array<() => void> = [];
   private retryTimer: any = null;
 
   constructor(private auth: AuthService) {}
@@ -40,9 +47,11 @@ export class RealtimeService {
 
     this.ws.onmessage = (event: MessageEvent) => {
       try {
-        const update: RealtimeUpdate = JSON.parse(event.data);
+        const update: RealtimeMessage = JSON.parse(event.data);
         if (update.type === 'state_update') {
           this.dispatchUpdate(update);
+        } else if (update.type === 'area_registry_update') {
+          this.areaHandlers.forEach(h => h());
         }
       } catch {
         // Mensaje malformado — ignorar
@@ -64,6 +73,13 @@ export class RealtimeService {
     this.handlers.push(handler);
     return () => {
       this.handlers = this.handlers.filter(h => h !== handler);
+    };
+  }
+
+  onAreaRegistryUpdate(handler: () => void): () => void {
+    this.areaHandlers.push(handler);
+    return () => {
+      this.areaHandlers = this.areaHandlers.filter(h => h !== handler);
     };
   }
 
