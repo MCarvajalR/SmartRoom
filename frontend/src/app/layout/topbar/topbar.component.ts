@@ -12,7 +12,13 @@ import { SettingsService } from '../../core/services/settings.service';
     <header class="topbar">
       <div class="topbar-left">
         @if (auth.hasRole('admin') && haUrl) {
-          <a [href]="haUrl" target="_blank" class="btn-ha">
+          <a
+            [href]="haUrl"
+            target="_blank"
+            class="btn-ha"
+            aria-label="Abrir Home Assistant"
+            title="Abrir Home Assistant"
+          >
             <i class="fa-solid fa-house-signal"></i>
             <span>Abrir Home Assistant</span>
           </a>

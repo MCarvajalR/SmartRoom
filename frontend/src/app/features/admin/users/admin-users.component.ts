@@ -98,9 +98,11 @@ import { User, UserCreate, UserRole, UserUpdate } from '../../../core/models/use
             @for (u of users; track u.id) {
               <tr [class.inactive-row]="!u.is_active">
                 <td class="user-cell">
-                  <div class="avatar">{{ u.username[0].toUpperCase() }}</div>
-                  {{ u.username }}
-                  @if (u.id === auth.user()?.id) { <span class="you-badge">Tú</span> }
+                  <div class="user-inline">
+                    <div class="avatar">{{ u.username[0].toUpperCase() }}</div>
+                    <span>{{ u.username }}</span>
+                    @if (u.id === auth.user()?.id) { <span class="you-badge">Tú</span> }
+                  </div>
                 </td>
                 <td class="muted">{{ u.email }}</td>
                 <td><span class="role-badge role-{{ u.role }}">{{ roleLabel(u.role) }}</span></td>
@@ -109,14 +111,16 @@ import { User, UserCreate, UserRole, UserUpdate } from '../../../core/models/use
                   {{ u.is_active ? 'Activo' : 'Inactivo' }}
                 </td>
                 <td class="muted small">{{ u.created_at | slice:0:10 }}</td>
-                <td class="actions">
-                  <button class="btn-action" type="button" (click)="openEdit(u)">Editar</button>
-                  <button class="btn-action" type="button" (click)="toggleActive(u)" [disabled]="u.id === auth.user()?.id">
-                    {{ u.is_active ? 'Desactivar' : 'Activar' }}
-                  </button>
-                  <button class="btn-action danger" type="button" (click)="remove(u)" [disabled]="u.id === auth.user()?.id">
-                    Eliminar
-                  </button>
+                <td>
+                  <div class="actions">
+                    <button class="btn-action" type="button" (click)="openEdit(u)">Editar</button>
+                    <button class="btn-action" type="button" (click)="toggleActive(u)" [disabled]="u.id === auth.user()?.id">
+                      {{ u.is_active ? 'Desactivar' : 'Activar' }}
+                    </button>
+                    <button class="btn-action danger" type="button" (click)="remove(u)" [disabled]="u.id === auth.user()?.id">
+                      Eliminar
+                    </button>
+                  </div>
                 </td>
               </tr>
             }

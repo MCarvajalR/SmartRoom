@@ -199,7 +199,8 @@
   }
 }
 
-:host:has(.sidebar.collapsed) {
+:host:has(.sidebar.collapsed),
+:host.sidebar-collapsed {
   flex-basis: 76px;
   width: 76px;
 }
@@ -279,18 +280,20 @@
     width: 76px;
   }
 
+  :host:not(.sidebar-collapsed),
   :host:has(.sidebar:not(.collapsed)) {
     flex-basis: min(238px, 82vw);
     width: min(238px, 82vw);
   }
 
   .sidebar:not(.collapsed) .sidebar-footer {
-    padding-inline: 14px;
+    padding-inline: 12px;
   }
 
   .sidebar:not(.collapsed) .btn-logout {
     width: 100%;
-    max-width: 190px;
-    margin-inline: 0;
+    max-width: calc(100% - 4px);
+    margin-inline: auto;
+    padding-inline: 10px;
   }
 }

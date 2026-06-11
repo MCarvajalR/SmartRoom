@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostBinding } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 
@@ -88,6 +88,11 @@ export class SidebarComponent {
   collapsed = window.innerWidth <= 760;
 
   constructor(public auth: AuthService) {}
+
+  @HostBinding('class.sidebar-collapsed')
+  get isCollapsed() {
+    return this.collapsed;
+  }
 
   toggleCollapsed() {
     this.collapsed = !this.collapsed;
