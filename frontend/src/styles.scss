@@ -240,3 +240,11 @@ app-root {
   display: block;
   height: 100%;
 }
+
+.device-control { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; min-width: 86px; max-width: 112px; height: 32px; padding: 3px 8px 3px 4px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-text-muted); font-size: .66rem; font-weight: 850; cursor: pointer; }
+.device-control:hover:not(:disabled), .device-control:focus-visible { border-color: var(--color-primary); color: var(--color-text); outline: none; }
+.device-control:disabled { cursor: wait; opacity: .72; }
+.device-control.control-active { border-color: var(--color-success); background: color-mix(in srgb, var(--color-success) 13%, var(--color-surface)); color: var(--color-success); }
+.control-track { display: grid; flex: 0 0 24px; width: 24px; height: 24px; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--color-text-muted) 13%, transparent); font-size: .75rem; }
+.control-active .control-track { background: var(--color-success); color: #fff; }
+.control-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
