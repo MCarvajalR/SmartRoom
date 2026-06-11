@@ -17,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_current_user, get_db, require_roles
 from app.models.access_log import AccessLog
+from app.models.device import Device
+from app.models.settings import Settings
 from app.models.user import User
 from app.schemas.access import AccessLogResponse, DoorStateResponse
 from app.services.ha_client import call_service, get_state
@@ -62,6 +64,49 @@ async def call_door_service(action: str) -> bool:
         return await call_service("input_boolean", service, door_id)
 
 
+async def get_configured_door_entity_id(db: AsyncSession) -> str:
+    result = await db.execute(select(Settings).where(Settings.id == 1))
+    settings = result.scalar_one_or_none()
+    configured_device = settings.door_entity_id.strip() if settings and settings.door_entity_id else ""
+    if configured_device:
+        if configured_device.isdigit():
+            device = await db.get(Device, int(configured_device))
+            if not device:
+                raise HTTPException(status_code=404, detail="Dispositivo de acceso configurado no encontrado")
+            if not device.is_active:
+                raise HTTPException(status_code=409, detail="El dispositivo de acceso configurado esta inactivo")
+            return device.entity_id
+        return configured_device
+
+    state = await get_state(DOOR_LOCK_ENTITY_ID)
+    if state:
+        return DOOR_LOCK_ENTITY_ID
+    return DOOR_FALLBACK_ENTITY_ID
+
+
+def resolve_configured_door_service(entity_id: str, action: str) -> tuple[str, str]:
+    domain = entity_id.split(".", 1)[0]
+
+    if domain == "lock":
+        return "lock", "lock" if action == "lock" else "unlock"
+
+    if domain in {"switch", "input_boolean", "light"}:
+        return domain, "turn_off" if action == "lock" else "turn_on"
+
+    if domain == "cover":
+        return "cover", "close_cover" if action == "lock" else "open_cover"
+
+    raise HTTPException(
+        status_code=400,
+        detail=f"El dispositivo configurado ({entity_id}) no soporta control de acceso",
+    )
+
+
+async def call_configured_door_service(entity_id: str, action: str) -> bool:
+    service_domain, service_name = resolve_configured_door_service(entity_id, action)
+    return await call_service(service_domain, service_name, entity_id)
+
+
 @router.get("/door", response_model=DoorStateResponse)
 async def get_door_state(
     db: AsyncSession = Depends(get_db),
@@ -80,7 +125,7 @@ async def get_door_state(
         502: Si no se puede conectar a Home Assistant
     
     """
-    door_id = await get_door_entity_id()
+    door_id = await get_configured_door_entity_id(db)
     state_data = await get_state(door_id)
     if not state_data:
         raise HTTPException(status_code=502, detail="No se pudo conectar con Home Assistant")
@@ -91,6 +136,8 @@ async def get_door_state(
     # Normalizar estado según tipo de entidad
     if door_id.startswith("lock."):
         door_state = "locked" if ha_state == "locked" else "unlocked"
+    elif door_id.startswith("cover."):
+        door_state = "locked" if ha_state in {"closed", "closing"} else "unlocked"
     else:
         door_state = "unlocked" if ha_state == "on" else "locked"
 
@@ -121,8 +168,8 @@ async def lock_door(
     Side Effects:
         Registra el evento en access_logs
     """
-    door_id = await get_door_entity_id()
-    success = await call_door_service("lock")
+    door_id = await get_configured_door_entity_id(db)
+    success = await call_configured_door_service(door_id, "lock")
     if not success:
         raise HTTPException(status_code=502, detail="Error al ejecutar el servicio en Home Assistant")
 
@@ -152,8 +199,8 @@ async def unlock_door(
     Side Effects:
         Registra el evento en access_logs
     """
-    door_id = await get_door_entity_id()
-    success = await call_door_service("unlock")
+    door_id = await get_configured_door_entity_id(db)
+    success = await call_configured_door_service(door_id, "unlock")
     if not success:
         raise HTTPException(status_code=502, detail="Error al ejecutar el servicio en Home Assistant")
 

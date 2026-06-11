@@ -37,10 +37,10 @@ interface SystemSettings {
 
 <div class="config-section">
           <h3>Dispositivo de Control de Acceso</h3>
-          <p class="description">Entity ID del dispositivo que controla la puerta (cerradura inteligente).</p>
+          <p class="description">ID del dispositivo en SmartRoom o Entity ID de Home Assistant que se acciona desde el control de acceso.</p>
           
           <div class="interval-input">
-            <input type="text" [(ngModel)]="doorEntityId" (ngModelChange)="onDoorChange()" placeholder="input_boolean.puerta" />
+            <input type="text" [(ngModel)]="doorEntityId" (ngModelChange)="onDoorChange()" placeholder="12 o switch.interruptor" />
             <button class="btn-primary" (click)="saveSettings()" [disabled]="saving || !hasDoorChanged">
               {{ saving ? 'Guardando...' : 'Guardar' }}
             </button>
