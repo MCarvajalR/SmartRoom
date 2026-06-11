@@ -57,7 +57,7 @@ async def ensure_energy_simulator(db: AsyncSession) -> Device:
             device_type="power",
             unit="W",
             area_id="laboratorio",
-            visibility="public",
+            visibility="admin",
             is_active=True,
         )
         db.add(device)

@@ -258,7 +258,7 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
           <tbody>
             @for (d of filteredDevices; track d.id) {
               <tr [class.selected-row]="editingDevice?.id === d.id" [class.hidden-row]="!d.is_active">
-                <td [title]="d.name">{{ d.name }}</td>
+                <td style="white-space: normal; overflow-wrap: anywhere" [title]="d.name">{{ d.name }}</td>
                 <td class="mono entity-id-cell" [title]="d.entity_id">{{ d.entity_id }}</td>
                 <td [title]="typeLabel(d.device_type)">{{ typeLabel(d.device_type) }}</td>
                 <td><span class="area-badge" [title]="areaName(d.area_id)">{{ areaName(d.area_id) }}</span></td>
@@ -396,7 +396,7 @@ export class AdminDevicesComponent implements OnInit {
     entityId: [{ value: '', disabled: true }],
     deviceType: ['other' as DeviceType, Validators.required],
     unit: ['', Validators.maxLength(20)],
-    visibility: ['public' as Visibility, Validators.required],
+    visibility: ['admin' as Visibility, Validators.required],
     areaId: [''],
     isActive: [true],
   });
@@ -443,7 +443,7 @@ export class AdminDevicesComponent implements OnInit {
     this.editForm.reset({
       name: device.name,
       entityId: device.entity_id,
-      deviceType: device.device_type,
+      deviceType: this.normalizeDeviceType(device.device_type),
       unit: device.unit ?? '',
       visibility: device.visibility,
       areaId: device.area_id ?? '',
@@ -463,7 +463,7 @@ export class AdminDevicesComponent implements OnInit {
     const value = this.editForm.getRawValue();
     const payload: DeviceUpdate = {
       name: value.name!.trim(),
-      device_type: value.deviceType!,
+      device_type: this.normalizeDeviceType(value.deviceType),
       unit: value.unit?.trim() || null,
       visibility: value.visibility!,
       area_id: value.areaId || null,
@@ -615,7 +615,7 @@ export class AdminDevicesComponent implements OnInit {
         device_type: DC_MAP[e.device_class ?? ''] ?? 'other',
         unit: e.unit,
         area_id: e.area_id,
-        visibility: 'public',
+        visibility: 'admin',
       }));
 
     this.http.post(`${API_BASE_URL}/devices/discover/import`, { entities }).subscribe({
@@ -660,7 +660,7 @@ export class AdminDevicesComponent implements OnInit {
   }
 
   typeLabel(type: DeviceType) {
-    return this.deviceTypes.find(option => option.value === type)?.label ?? type;
+    return this.deviceTypes.find(option => option.value === this.normalizeDeviceType(type))?.label ?? 'Otro';
   }
 
   visibilityLabel(visibility: Visibility) {
@@ -678,6 +678,10 @@ export class AdminDevicesComponent implements OnInit {
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim();
+  }
+
+  private normalizeDeviceType(type: DeviceType | string | null | undefined): DeviceType {
+    return this.deviceTypes.some(option => option.value === type) ? type as DeviceType : 'other';
   }
 
   private errorDetail(detail: unknown) {

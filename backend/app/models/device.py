@@ -57,7 +57,7 @@ class Device(Base):
     unit: Mapped[str] = mapped_column(String(20), nullable=True)
     area_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    visibility: Mapped[str] = mapped_column(String(20), nullable=False, default="public")
+    visibility: Mapped[str] = mapped_column(String(20), nullable=False, default="admin")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )

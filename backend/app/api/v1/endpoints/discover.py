@@ -71,7 +71,7 @@ class ImportEntity(BaseModel):
     device_type: str = "other"
     unit: str | None = None
     area_id: str | None = None
-    visibility: str = "public"
+    visibility: str = "admin"
 
 
 class ImportRequest(BaseModel):
@@ -203,7 +203,7 @@ async def import_discovered_devices(
                     device_type=e.device_type or "other",
                     unit=e.unit,
                     area_id=e.area_id if e.area_id in accepted_area_ids else None,
-                    visibility=e.visibility or "public",
+                    visibility=e.visibility or "admin",
                     is_active=True,
                 )
 

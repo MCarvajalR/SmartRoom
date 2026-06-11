@@ -89,7 +89,7 @@ async def sync_devices_from_ha(db: AsyncSession) -> dict:
                             if payload.get("area_id") in accepted_area_ids
                             else None
                         ),
-                        visibility="public",
+                        visibility="admin",
                         is_active=True,
                     )
                 )

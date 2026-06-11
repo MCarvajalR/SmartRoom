@@ -423,7 +423,7 @@ async def get_discovered_devices() -> list[dict]:
                         "device_type": sensor_meta["device_type"],
                         "unit": attrs.get(f"{attribute}_unit") or sensor_meta["unit"],
                         "area_id": entity_area_map.get(entity_id),
-                        "visibility": "public",
+                        "visibility": "admin",
                         "state": str(raw_value),
                     }
                 )
@@ -438,7 +438,7 @@ async def get_discovered_devices() -> list[dict]:
                 "device_type": device_type,
                 "unit": attrs.get("unit_of_measurement"),
                 "area_id": entity_area_map.get(entity_id),
-                "visibility": "public",
+                "visibility": "admin",
                 "state": state.get("state"),
             }
         )

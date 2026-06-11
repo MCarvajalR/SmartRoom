@@ -41,14 +41,14 @@ class DeviceCreate(BaseModel):
         device_type: Tipo de dispositivo (default: "other")
         unit: Unidad de medición (ej: "°C", "%")
         area_id: ID del área local en SmartRoom
-        visibility: Nivel de visibilidad (default: "public")
+        visibility: Nivel de visibilidad (default: "admin")
     """
     entity_id: str
     name: str = Field(min_length=2, max_length=80)
     device_type: DeviceType = "other"
     unit: str | None = Field(default=None, max_length=20)
     area_id: str | None = None
-    visibility: Visibility = "public"
+    visibility: Visibility = "admin"
 
 
 class DeviceUpdate(BaseModel):
@@ -126,7 +126,7 @@ class AreaDeviceHybridOut(BaseModel):
     unit: str | None = None
     area_id: str | None = None
     is_active: bool = True
-    visibility: str = "public"
+    visibility: str = "admin"
     created_at: datetime | None = None
     source: str = "db"
 

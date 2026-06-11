@@ -1,15 +1,17 @@
 .topbar {
+  position: sticky;
+  top: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   min-height: 76px;
   padding: 0 var(--space-6);
-  overflow-x: auto;
+  overflow-x: visible;
   overflow-y: visible;
   background: var(--color-bg);
   border-bottom: none;
-  z-index: 100;
+  z-index: 1000;
   scrollbar-width: none;
 
   &::-webkit-scrollbar {
@@ -163,6 +165,7 @@
 
 .account-menu {
   position: relative;
+  z-index: 1001;
 }
 
 .menu-chevron {
@@ -179,7 +182,7 @@
   position: absolute;
   top: calc(100% + var(--space-2));
   right: 0;
-  z-index: 200;
+  z-index: 1100;
   width: min(280px, calc(100vw - var(--space-6) * 2));
   padding: var(--space-2);
   border: 1px solid var(--color-border);

@@ -115,7 +115,7 @@ async def process_state_change(event_data: dict) -> None:
                 name=attrs.get("friendly_name", entity_id),
                 device_type=TYPE_MAP.get(device_class, entity_id.split(".")[0]),
                 unit=attrs.get("unit_of_measurement"),
-                visibility="public",
+                visibility="admin",
                 is_active=False,
             )
             try:
@@ -224,7 +224,7 @@ async def process_entity_registry_update(data: dict) -> None:
                 device_type=TYPE_MAP.get(attrs.get("device_class", ""), entity_id.split(".")[0]),
                 unit=attrs.get("unit_of_measurement"),
                 area_id=accepted_area_id,
-                visibility="public",
+                visibility="admin",
                 is_active=True,
             )
             try:
