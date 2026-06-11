@@ -13,7 +13,8 @@ Filtros de visibilidad:
 - Admin: todos los niveles
 """
 
-from typing import List
+import asyncio
+from typing import List, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
@@ -40,6 +41,46 @@ router = APIRouter(prefix="/devices", tags=["Dispositivos"])
 
 class AreaPayload(BaseModel):
     name: str = Field(min_length=2, max_length=80)
+
+
+class DeviceControlPayload(BaseModel):
+    action: Literal["on", "off", "open", "close", "toggle"]
+
+
+def _ha_domain(entity_id: str) -> str:
+    return entity_id.split(".", 1)[0] if "." in entity_id else ""
+
+
+def _is_active_state(state: str) -> bool:
+    return state.lower() in {"on", "open", "opening", "unlocked", "active", "true"}
+
+
+def _resolve_control_service(domain: str, action: str, current_state: str | None) -> tuple[str, str] | None:
+    if domain in {"switch", "input_boolean", "light"}:
+        if action == "toggle":
+            action = "off" if current_state and _is_active_state(current_state) else "on"
+        if action in {"open", "on"}:
+            return domain, "turn_on"
+        if action in {"close", "off"}:
+            return domain, "turn_off"
+
+    if domain == "lock":
+        if action == "toggle":
+            action = "close" if current_state and _is_active_state(current_state) else "open"
+        if action in {"open", "on"}:
+            return "lock", "unlock"
+        if action in {"close", "off"}:
+            return "lock", "lock"
+
+    if domain == "cover":
+        if action == "toggle":
+            action = "close" if current_state and _is_active_state(current_state) else "open"
+        if action in {"open", "on"}:
+            return "cover", "open_cover"
+        if action in {"close", "off"}:
+            return "cover", "close_cover"
+
+    return None
 
 
 async def use_ha_area_registry() -> bool:
@@ -190,6 +231,48 @@ async def list_all_devices(
         .order_by(Device.name)
     )
     return result.scalars().all()
+
+
+@router.post("/{device_id}/control", response_model=dict)
+async def control_device(
+    device_id: int,
+    payload: DeviceControlPayload,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_roles("admin")),
+):
+    result = await db.execute(select(Device).where(Device.id == device_id))
+    device = result.scalar_one_or_none()
+    if not device:
+        raise HTTPException(status_code=404, detail="Dispositivo no encontrado")
+    if not device.is_active:
+        raise HTTPException(status_code=409, detail="El dispositivo esta inactivo.")
+    if ha_client.is_system_managed_entity(device.entity_id):
+        raise HTTPException(status_code=409, detail="Este dispositivo no acepta acciones directas.")
+
+    domain = _ha_domain(device.entity_id)
+    state_data = await ha_client.get_state(device.entity_id)
+    current_state = str(state_data.get("state", "")) if state_data else None
+    service_target = _resolve_control_service(domain, payload.action, current_state)
+    if not service_target:
+        raise HTTPException(status_code=400, detail="Este tipo de dispositivo no admite control desde SmartRoom.")
+
+    service_domain, service_name = service_target
+    success = await ha_client.call_service(service_domain, service_name, device.entity_id)
+    if not success:
+        raise HTTPException(status_code=502, detail="Home Assistant no acepto la accion solicitada.")
+
+    await asyncio.sleep(0.4)
+    updated_state = await ha_client.get_state(device.entity_id)
+    raw_state = str(updated_state.get("state", current_state or "")) if updated_state else current_state
+
+    return {
+        "device_id": device.id,
+        "entity_id": device.entity_id,
+        "action": payload.action,
+        "service": f"{service_domain}.{service_name}",
+        "raw_state": raw_state,
+        "triggered_by": current_user.username,
+    }
 
 
 @router.patch("/{device_id}", response_model=DeviceResponse)

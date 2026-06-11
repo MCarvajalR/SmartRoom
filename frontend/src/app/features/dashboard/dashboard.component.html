@@ -87,6 +87,17 @@
                 <h3>{{ getDisplayName(d.device_name) }}</h3>
                 <div class="metric-value"><strong>{{ getFriendlyValue(d) }}</strong>@if (d.value !== null && cleanUnit(d.unit)) { <span>{{ cleanUnit(d.unit) }}</span> }</div>
                 <div class="metric-meta"><span><i class="fas fa-clock"></i> {{ d.recorded_at | date:'HH:mm' }}</span><span class="access-hint">Historial <i class="fas fa-arrow-right"></i></span></div>
+                @if (canControlDevice(d)) {
+                  <button
+                    class="btn-refresh"
+                    type="button"
+                    [class.control-active]="isOnState(d.raw_state)"
+                    [disabled]="isControlling(d.device_id)"
+                    (click)="controlDevice(d, $event)">
+                    <i class="fas" [ngClass]="getControlIcon(d)"></i>
+                    <span>{{ isControlling(d.device_id) ? 'Aplicando...' : getControlLabel(d) }}</span>
+                  </button>
+                }
               </div>
             </article>
           }

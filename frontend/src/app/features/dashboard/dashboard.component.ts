@@ -34,6 +34,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isInitialLoading = true;
   isRefreshing = false;
   loadError = false;
+  controllingDeviceIds = new Set<number>();
   outdoorWeather: OutdoorWeather = {
     location: 'Popayan', source: 'Open-Meteo', condition: 'unknown', is_day: true,
     temperature: null, humidity: null, apparent_temperature: null, cloud_coverage: null,
@@ -312,10 +313,95 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return switchTypes.includes(deviceType.toLowerCase());
   }
 
+  canControlDevice(device: TelemetryLatest): boolean {
+    if (!this.auth.hasRole('admin') || this.isUnavailable(device)) return false;
+    const domain = this.getEntityDomain(device.entity_id);
+    return ['switch', 'input_boolean', 'light', 'lock', 'cover'].includes(domain);
+  }
+
+  isControlling(deviceId: number): boolean {
+    return this.controllingDeviceIds.has(deviceId);
+  }
+
+  getControlLabel(device: TelemetryLatest): string {
+    const domain = this.getEntityDomain(device.entity_id);
+    const active = this.isOnState(device.raw_state);
+    const accessLike = this.isAccessLikeDevice(device);
+
+    if (domain === 'lock') return active ? 'Cerrar' : 'Abrir';
+    if (domain === 'cover') return active ? 'Cerrar' : 'Abrir';
+    if (accessLike) return active ? 'Cerrar' : 'Abrir';
+    return active ? 'Apagar' : 'Encender';
+  }
+
+  getControlIcon(device: TelemetryLatest): string {
+    const domain = this.getEntityDomain(device.entity_id);
+    const active = this.isOnState(device.raw_state);
+
+    if (domain === 'lock') return active ? 'fa-lock' : 'fa-lock-open';
+    if (domain === 'cover' || this.isAccessLikeDevice(device)) return active ? 'fa-door-closed' : 'fa-door-open';
+    return active ? 'fa-toggle-off' : 'fa-toggle-on';
+  }
+
+  controlDevice(device: TelemetryLatest, event: MouseEvent) {
+    event.stopPropagation();
+    if (!this.canControlDevice(device) || this.isControlling(device.device_id)) return;
+
+    const action = this.nextControlAction(device);
+    this.controllingDeviceIds = new Set(this.controllingDeviceIds).add(device.device_id);
+
+    this.devicesService.control(device.device_id, action).pipe(
+      finalize(() => {
+        const next = new Set(this.controllingDeviceIds);
+        next.delete(device.device_id);
+        this.controllingDeviceIds = next;
+      })
+    ).subscribe({
+      next: result => {
+        if (result.raw_state) {
+          this.updateDeviceState(device.device_id, result.raw_state);
+        }
+        this.refreshDashboardData();
+      },
+      error: err => {
+        console.error('Error controlando dispositivo:', err);
+      },
+    });
+  }
+
   isAccessDevice(device: TelemetryLatest): boolean {
     const entityId = device.entity_id.toLowerCase();
     const deviceName = device.device_name.toLowerCase();
     return device.device_type.toLowerCase() === 'lock' || entityId.includes('puerta') || deviceName.includes('puerta');
+  }
+
+  private isAccessLikeDevice(device: TelemetryLatest): boolean {
+    const text = `${device.entity_id} ${device.device_name}`.toLowerCase();
+    return this.isAccessDevice(device) || text.includes('door') || text.includes('window') || text.includes('ventana');
+  }
+
+  private getEntityDomain(entityId: string): string {
+    return entityId.toLowerCase().split('.', 1)[0] ?? '';
+  }
+
+  private nextControlAction(device: TelemetryLatest): 'on' | 'off' | 'open' | 'close' {
+    const active = this.isOnState(device.raw_state);
+    const domain = this.getEntityDomain(device.entity_id);
+    if (domain === 'lock' || domain === 'cover' || this.isAccessLikeDevice(device)) {
+      return active ? 'close' : 'open';
+    }
+    return active ? 'off' : 'on';
+  }
+
+  private updateDeviceState(deviceId: number, rawState: string) {
+    this.devices = this.devices.map(device =>
+      device.device_id === deviceId
+        ? { ...device, raw_state: rawState, value: Number.isFinite(Number(rawState)) ? Number(rawState) : null, recorded_at: new Date().toISOString() }
+        : device
+    );
+    this.lastUpdate = new Date();
+    this.recentlyUpdated.add(deviceId);
+    setTimeout(() => this.recentlyUpdated.delete(deviceId), 1500);
   }
 
   isLegacyOutdoorWeather(device: TelemetryLatest): boolean {

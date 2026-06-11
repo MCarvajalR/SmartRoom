@@ -39,6 +39,17 @@ export class DeviceService {
     return this.http.patch<Device>(`${API_BASE_URL}/devices/${id}`, data);
   }
 
+  control(id: number, action: 'on' | 'off' | 'open' | 'close' | 'toggle') {
+    return this.http.post<{
+      device_id: number;
+      entity_id: string;
+      action: string;
+      service: string;
+      raw_state: string | null;
+      triggered_by: string;
+    }>(`${API_BASE_URL}/devices/${id}/control`, { action });
+  }
+
   delete(id: number) {
     return this.http.delete<void>(`${API_BASE_URL}/devices/${id}`);
   }
