@@ -99,7 +99,7 @@ async def get_history(
     device_id: Optional[int] = Query(None, description="ID del dispositivo a filtrar"),
     date: Optional[str] = Query(None, description="Fecha en formato YYYY-MM-DD"),
     hour: Optional[int] = Query(None, ge=0, le=23, description="Hora del día (0-23)"),
-    limit: int = Query(100, le=1000, description="Cantidad máxima de registros"),
+    limit: int = Query(100, le=20000, description="Cantidad máxima de registros"),
     offset: int = Query(0, ge=0, description="Offset para paginación"),
     start: Optional[datetime] = Query(None, description="Fecha/hora de inicio"),
     end: Optional[datetime] = Query(None, description="Fecha/hora de fin"),
@@ -138,29 +138,19 @@ async def get_history(
         if end:
             query = query.where(TelemetryRecord.recorded_at <= end)
     else:
-        # Para "todos los dispositivos", primero se reduce el universo a los
-        # últimos registros del rango y después se aplica visibilidad.
-        recent_records = select(TelemetryRecord.id)
-
-        if start:
-            recent_records = recent_records.where(TelemetryRecord.recorded_at >= start)
-        if end:
-            recent_records = recent_records.where(TelemetryRecord.recorded_at <= end)
-
-        recent_records = (
-            recent_records
-            .order_by(desc(TelemetryRecord.recorded_at))
-            .limit(min(limit + offset + 100, 2000))
-            .subquery()
-        )
-
+        # Para "todos los dispositivos", filtra por rango sobre todo el historial
+        # visible. No recorta antes de tiempo, para permitir consultas largas.
         query = (
             select(TelemetryRecord, Device)
-            .join(recent_records, TelemetryRecord.id == recent_records.c.id)
             .join(Device, TelemetryRecord.device_id == Device.id)
             .where(Device.is_active.is_(True))
             .where(Device.visibility.in_(levels))
         )
+
+        if start:
+            query = query.where(TelemetryRecord.recorded_at >= start)
+        if end:
+            query = query.where(TelemetryRecord.recorded_at <= end)
     
     # Filtro por fecha (YYYY-MM-DD)
     if date:

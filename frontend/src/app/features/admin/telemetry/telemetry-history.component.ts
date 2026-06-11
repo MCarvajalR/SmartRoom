@@ -48,6 +48,7 @@ interface HistoryCacheState {
   startDateTime: string;
   endDateTime: string;
   limit: number;
+  offset: number;
   fetchedAt: number;
 }
 
@@ -172,6 +173,9 @@ interface HistoryCacheState {
             <option [ngValue]="250">250</option>
             <option [ngValue]="500">500</option>
             <option [ngValue]="1000">1000</option>
+            <option [ngValue]="2500">2500</option>
+            <option [ngValue]="5000">5000</option>
+            <option [ngValue]="10000">10000</option>
           </select>
         </div>
       </section>
@@ -499,6 +503,7 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
   startDateTime = '';
   endDateTime = '';
   limit = 50;
+  offset = 0;
   showAllRecords = false;
   readonly initialRecordLimit = 8;
   updatedAt: number | null = null;
@@ -892,7 +897,7 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
   private buildHistoryUrl(): string {
     const params = new URLSearchParams({
       limit: String(this.limit),
-      offset: '0',
+      offset: String(this.offset),
     });
 
     if (this.selectedDeviceId) params.set('device_id', String(this.selectedDeviceId));
@@ -911,6 +916,7 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
     this.startDateTime = cache.startDateTime;
     this.endDateTime = cache.endDateTime;
     this.limit = cache.limit;
+    this.offset = cache.offset ?? 0;
     this.updatedAt = cache.fetchedAt;
     this.nowTimestamp = Date.now();
     this.loading = false;
@@ -928,6 +934,7 @@ export class TelemetryHistoryComponent implements OnInit, OnDestroy {
       startDateTime: this.startDateTime,
       endDateTime: this.endDateTime,
       limit: this.limit,
+      offset: this.offset,
       fetchedAt: this.updatedAt ?? Date.now(),
     };
   }
