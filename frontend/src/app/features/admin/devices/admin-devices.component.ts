@@ -220,6 +220,28 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
         </section>
       }
 
+      <section class="device-list-card">
+        <div class="device-list-header">
+          <div>
+            <p class="eyebrow">Inventario</p>
+            <h3>Dispositivos registrados</h3>
+            <p>{{ filteredDevices.length }} de {{ devices.length }} dispositivos visibles</p>
+          </div>
+          <div class="device-search">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input
+              type="text"
+              [(ngModel)]="deviceSearchTerm"
+              placeholder="Buscar dispositivo"
+              aria-label="Buscar dispositivo" />
+            @if (deviceSearchTerm) {
+              <button type="button" class="clear-search" (click)="clearDeviceSearch()" aria-label="Limpiar busqueda">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            }
+          </div>
+        </div>
+
       <div class="table-wrap">
         <table class="data-table">
           <colgroup>
@@ -233,7 +255,7 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
             </tr>
           </thead>
           <tbody>
-            @for (d of devices; track d.id) {
+            @for (d of filteredDevices; track d.id) {
               <tr [class.selected-row]="editingDevice?.id === d.id" [class.hidden-row]="!d.is_active">
                 <td>{{ d.name }}</td>
                 <td class="mono entity-id-cell" [title]="d.entity_id">{{ d.entity_id }}</td>
@@ -337,9 +359,13 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
             @if (devices.length === 0) {
               <tr><td colspan="8" class="empty-cell">No hay dispositivos registrados</td></tr>
             }
+            @if (devices.length > 0 && filteredDevices.length === 0) {
+              <tr><td colspan="8" class="empty-cell">No hay dispositivos que coincidan con la busqueda.</td></tr>
+            }
           </tbody>
         </table>
       </div>
+      </section>
     </div>
   `,
   styleUrl: './admin-devices.component.scss'
@@ -353,6 +379,7 @@ export class AdminDevicesComponent implements OnInit {
   discoverError = '';
   discovered: DiscoveredEntity[] = [];
   selectedEntities = new Set<string>();
+  deviceSearchTerm = '';
   editingDevice: Device | null = null;
   savingDevice = false;
   editError = '';
@@ -383,6 +410,30 @@ export class AdminDevicesComponent implements OnInit {
   ngOnInit() {
     this.loadDevices();
     this.loadAreas();
+  }
+
+  get filteredDevices(): Device[] {
+    const term = this.normalizeSearch(this.deviceSearchTerm);
+    if (!term) return this.devices;
+
+    return this.devices.filter(device => {
+      const haystack = [
+        device.name,
+        device.entity_id,
+        this.typeLabel(device.device_type),
+        device.device_type,
+        this.areaName(device.area_id),
+        device.unit ?? '',
+        this.visibilityLabel(device.visibility),
+        device.is_active ? 'activo' : 'inactivo',
+      ].map(value => this.normalizeSearch(value)).join(' ');
+
+      return haystack.includes(term);
+    });
+  }
+
+  clearDeviceSearch() {
+    this.deviceSearchTerm = '';
   }
 
   openEditor(device: Device) {
@@ -618,6 +669,14 @@ export class AdminDevicesComponent implements OnInit {
   areaName(areaId: string | null) {
     if (!areaId) return 'Sin asignar';
     return this.areas.find(area => area.area_id === areaId)?.name ?? areaId;
+  }
+
+  private normalizeSearch(value: string) {
+    return value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
   }
 
   private errorDetail(detail: unknown) {
