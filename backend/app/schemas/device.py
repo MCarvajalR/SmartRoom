@@ -25,6 +25,7 @@ DeviceType = Literal[
     "device_tracker",
     "climate",
     "cover",
+    "button",
     "other",
 ]
 Visibility = Literal["public", "docente", "admin"]

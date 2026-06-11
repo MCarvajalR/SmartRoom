@@ -316,7 +316,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   canControlDevice(device: TelemetryLatest): boolean {
     if (!this.auth.hasRole('admin') || this.isUnavailable(device)) return false;
     const domain = this.getEntityDomain(device.entity_id);
-    return ['switch', 'input_boolean', 'light', 'lock', 'cover'].includes(domain);
+    return ['switch', 'input_boolean', 'light', 'lock', 'cover', 'button'].includes(domain);
   }
 
   isControlling(deviceId: number): boolean {
@@ -328,6 +328,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const active = this.isOnState(device.raw_state);
     const accessLike = this.isAccessLikeDevice(device);
 
+    if (domain === 'button') return 'Presionar';
     if (domain === 'lock') return active ? 'Cerrar' : 'Abrir';
     if (domain === 'cover') return active ? 'Cerrar' : 'Abrir';
     if (accessLike) return active ? 'Cerrar' : 'Abrir';
@@ -338,6 +339,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const domain = this.getEntityDomain(device.entity_id);
     const active = this.isOnState(device.raw_state);
 
+    if (domain === 'button') return 'fa-hand-pointer';
     if (domain === 'lock') return active ? 'fa-lock' : 'fa-lock-open';
     if (domain === 'cover' || this.isAccessLikeDevice(device)) return active ? 'fa-door-closed' : 'fa-door-open';
     return active ? 'fa-toggle-off' : 'fa-toggle-on';
@@ -387,6 +389,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private nextControlAction(device: TelemetryLatest): 'on' | 'off' | 'open' | 'close' {
     const active = this.isOnState(device.raw_state);
     const domain = this.getEntityDomain(device.entity_id);
+    if (domain === 'button') return 'on';
     if (domain === 'lock' || domain === 'cover' || this.isAccessLikeDevice(device)) {
       return active ? 'close' : 'open';
     }

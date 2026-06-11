@@ -13,6 +13,7 @@ export type DeviceType =
   | 'device_tracker'
   | 'climate'
   | 'cover'
+  | 'button'
   | 'other';
 export type Visibility = 'public' | 'docente' | 'admin';
 

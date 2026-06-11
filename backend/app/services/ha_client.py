@@ -35,6 +35,7 @@ RELEVANT_PREFIXES = (
     "light.",
     "climate.",
     "cover.",
+    "button.",
     "weather.",
 )
 

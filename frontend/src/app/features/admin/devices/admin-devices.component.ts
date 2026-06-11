@@ -39,6 +39,7 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
   { value: 'device_tracker', label: 'Rastreador de dispositivo' },
   { value: 'climate', label: 'Climatizaci\u00f3n' },
   { value: 'cover', label: 'Persiana o cubierta' },
+  { value: 'button', label: 'Bot\u00f3n' },
   { value: 'sensor', label: 'Sensor gen\u00e9rico' },
   { value: 'other', label: 'Otro' },
 ];

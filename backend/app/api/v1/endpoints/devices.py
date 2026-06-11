@@ -80,6 +80,9 @@ def _resolve_control_service(domain: str, action: str, current_state: str | None
         if action in {"close", "off"}:
             return "cover", "close_cover"
 
+    if domain == "button" and action in {"toggle", "on", "open"}:
+        return "button", "press"
+
     return None
 
 
