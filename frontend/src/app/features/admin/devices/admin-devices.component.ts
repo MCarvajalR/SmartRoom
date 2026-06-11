@@ -257,10 +257,10 @@ const DEVICE_TYPES: { value: DeviceType; label: string }[] = [
           <tbody>
             @for (d of filteredDevices; track d.id) {
               <tr [class.selected-row]="editingDevice?.id === d.id" [class.hidden-row]="!d.is_active">
-                <td>{{ d.name }}</td>
+                <td [title]="d.name">{{ d.name }}</td>
                 <td class="mono entity-id-cell" [title]="d.entity_id">{{ d.entity_id }}</td>
-                <td>{{ typeLabel(d.device_type) }}</td>
-                <td><span class="area-badge">{{ areaName(d.area_id) }}</span></td>
+                <td [title]="typeLabel(d.device_type)">{{ typeLabel(d.device_type) }}</td>
+                <td><span class="area-badge" [title]="areaName(d.area_id)">{{ areaName(d.area_id) }}</span></td>
                 <td>{{ d.unit ?? '-' }}</td>
                 <td><span class="vis-badge vis-{{ d.visibility }}">{{ visibilityLabel(d.visibility) }}</span></td>
                 <td>
