@@ -338,15 +338,45 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private findInteriorMetric(type: 'temperature' | 'humidity'): TelemetryLatest | undefined {
     return this.devices
-      .filter(device => device.device_type.toLowerCase() === type && !this.isLegacyOutdoorWeather(device))
+      .filter(device => this.isInteriorMetricCandidate(device, type))
       .sort((a, b) => this.interiorPriority(b) - this.interiorPriority(a))[0];
   }
 
   private interiorPriority(device: TelemetryLatest): number {
     const text = `${device.entity_id} ${device.device_name}`.toLowerCase();
-    if (text.includes('sonoff') || text.includes('snzb')) return 30;
-    if (text.includes('laboratorio') || text.includes('lab')) return 20;
-    return 0;
+    let score = 0;
+
+    if (device.entity_id.toLowerCase().startsWith('sensor.')) score += 40;
+    if (text.includes('sonoff') || text.includes('snzb')) score += 30;
+    if (text.includes('laboratorio') || text.includes('lab')) score += 20;
+    if (text.includes('prueba')) score += 10;
+
+    return score;
+  }
+
+  private isInteriorMetricCandidate(device: TelemetryLatest, type: 'temperature' | 'humidity'): boolean {
+    if (device.device_type.toLowerCase() !== type || this.isLegacyOutdoorWeather(device)) return false;
+
+    const entityId = device.entity_id.toLowerCase();
+    const text = `${entityId} ${device.device_name}`.toLowerCase();
+    const blockedTerms = [
+      'comfort',
+      'offset',
+      'min',
+      'max',
+      'display',
+      'identify',
+      'battery',
+      'forecast',
+    ];
+
+    if (!entityId.startsWith('sensor.')) return false;
+    if (blockedTerms.some(term => text.includes(term))) return false;
+
+    return entityId.endsWith(`_${type}`)
+      || entityId.includes(`_${type}_`)
+      || text.includes(type === 'temperature' ? 'temperatura' : 'humedad')
+      || text.includes(type);
   }
 
   isClimateDevice(device: TelemetryLatest): boolean {
