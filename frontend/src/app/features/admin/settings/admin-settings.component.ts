@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { SettingsService } from '../../../core/services/settings.service';
@@ -65,7 +65,10 @@ export class AdminSettingsComponent implements OnInit {
   hasDoorChanged = false;
   loaded = false;
 
-  constructor(private settingsSvc: SettingsService) {}
+  constructor(
+    private settingsSvc: SettingsService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     this.loadSettings();
@@ -83,10 +86,12 @@ export class AdminSettingsComponent implements OnInit {
         this.hasChanged = false;
         this.hasDoorChanged = false;
         this.loaded = true;
+        this.cdr.detectChanges();
       },
       error: (err) => {
         console.error('Error cargando settings:', err);
         this.loaded = true;
+        this.cdr.detectChanges();
       }
     });
 
@@ -94,6 +99,7 @@ export class AdminSettingsComponent implements OnInit {
       if (!this.loaded) {
         console.warn('Timeout esperando settings, mostrando UI con valores por defecto');
         this.loaded = true;
+        this.cdr.detectChanges();
       }
     }, 5000);
   }
@@ -109,6 +115,7 @@ export class AdminSettingsComponent implements OnInit {
   saveSettings() {
     this.saving = true;
     this.saveMessage = '';
+    this.cdr.detectChanges();
     
     const intervalToSave = this.hasChanged && this.intervalValue !== null ? this.intervalValue : undefined;
     
@@ -123,12 +130,17 @@ export class AdminSettingsComponent implements OnInit {
         this.hasDoorChanged = false;
         this.saveMessage = 'Configuración actualizada correctamente';
         this.saving = false;
-        setTimeout(() => this.saveMessage = '', 3000);
+        this.cdr.detectChanges();
+        setTimeout(() => {
+          this.saveMessage = '';
+          this.cdr.detectChanges();
+        }, 3000);
       },
       error: (err) => {
         console.error('Error guardando:', err);
         this.saveMessage = 'Error al guardar';
         this.saving = false;
+        this.cdr.detectChanges();
       }
     });
   }
