@@ -158,10 +158,11 @@
 
 .sidebar-footer {
   box-sizing: border-box;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: 0;
-  width: auto;
+  width: 100%;
   padding: 16px 14px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   background: rgba(7, 13, 25, 0.2);
@@ -189,6 +190,14 @@
   font-weight: 700;
   white-space: nowrap;
   transition: all 180ms ease;
+
+  i { flex: 0 0 auto; }
+
+  .nav-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
   &:hover {
     color: #fff;
