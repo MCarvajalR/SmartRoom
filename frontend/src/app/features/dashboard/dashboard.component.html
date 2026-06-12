@@ -84,7 +84,7 @@
               <div class="visual-icon"><i class="fas" [ngClass]="getDeviceIcon(d.device_type, d.raw_state)"></i></div>
               <div class="metric-content">
                 <span class="metric-context">{{ getDeviceContext(d) }}</span>
-                <h3>{{ getDisplayName(d.device_name) }}</h3>
+                <h3 [title]="getDisplayName(d.device_name)">{{ getDisplayName(d.device_name) }}</h3>
                 <div class="metric-value"><strong>{{ getFriendlyValue(d) }}</strong>@if (d.value !== null && cleanUnit(d.unit)) { <span>{{ cleanUnit(d.unit) }}</span> }</div>
                 <div class="metric-footer">
                   <div class="metric-meta"><span><i class="fas fa-clock"></i> {{ d.recorded_at | date:'HH:mm' }}</span><span class="access-hint">Historial <i class="fas fa-arrow-right"></i></span></div>
