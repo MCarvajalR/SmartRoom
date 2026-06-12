@@ -25,7 +25,7 @@ from app.core.config import settings
 from app.core.database import AsyncSessionLocal, Base, engine
 from app.core.security import hash_password
 from app.models import Device, Settings, User
-from app.services import ha_client, telemetry_service
+from app.services import ha_client, telemetry_retention, telemetry_service
 from app.services.area_service import ensure_local_areas
 from app.services.energy_simulator import ensure_energy_simulator
 from app.services.device_sync import sync_devices_from_ha
@@ -60,6 +60,22 @@ async def ensure_database_indexes() -> None:
     )
 
     async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                """
+                ALTER TABLE settings
+                ADD COLUMN IF NOT EXISTS telemetry_retention_days INTEGER NOT NULL DEFAULT 30
+                """
+            )
+        )
+        await conn.execute(
+            text(
+                """
+                ALTER TABLE settings
+                ADD COLUMN IF NOT EXISTS telemetry_retention_enabled BOOLEAN NOT NULL DEFAULT FALSE
+                """
+            )
+        )
         for statement in statements:
             await conn.execute(text(statement))
 
@@ -175,6 +191,17 @@ async def lifespan(app: FastAPI):
         seconds=telemetry_interval_seconds,
         id="sync_devices_from_ha",
         replace_existing=True,
+    )
+
+    scheduler.add_job(
+        telemetry_retention.run_scheduled_cleanup,
+        "cron",
+        hour=3,
+        minute=15,
+        id="cleanup_telemetry_history",
+        replace_existing=True,
+        coalesce=True,
+        max_instances=1,
     )
 
     # 4. Iniciar scheduler

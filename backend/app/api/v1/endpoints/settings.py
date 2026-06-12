@@ -12,11 +12,11 @@ La configuración incluye:
 """
 
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.dependencies import get_db, get_optional_user, require_roles
@@ -24,6 +24,7 @@ from app.models.device import Device
 from app.models.settings import Settings
 from app.models.telemetry import TelemetryRecord
 from app.models.user import User
+from app.services.telemetry_retention import delete_expired_records
 from app.services.scheduler import scheduler
 
 from app.core.config import settings as app_settings
@@ -40,9 +41,12 @@ class SettingsResponse(BaseModel):
         door_entity_id: Entity ID de la puerta en Home Assistant
     """
     telemetry_interval_seconds: int
+    telemetry_retention_days: int
+    telemetry_retention_enabled: bool
     door_entity_id: str | None = None
 
     ha_public_url: str | None = None
+    deleted_records: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -58,7 +62,15 @@ class SettingsUpdate(BaseModel):
         door_entity_id: Nueva entity ID de la puerta
     """
     telemetry_interval_seconds: int | None = Field(default=None, ge=10, le=3600)
+    telemetry_retention_days: int | None = Field(default=None, ge=1, le=3650)
+    confirm_retention_cleanup: bool = False
     door_entity_id: str | None = None
+
+
+class RetentionPreviewResponse(BaseModel):
+    retention_days: int
+    cutoff: datetime
+    records_to_delete: int
 
 
 class TelemetryHistoryResponse(BaseModel):
@@ -107,6 +119,8 @@ async def get_settings(
             logger.info(f"Returning existing settings: {settings.telemetry_interval_seconds}, {settings.door_entity_id}")
             result = {
                 "telemetry_interval_seconds": settings.telemetry_interval_seconds,
+                "telemetry_retention_days": settings.telemetry_retention_days,
+                "telemetry_retention_enabled": settings.telemetry_retention_enabled,
                 "door_entity_id": settings.door_entity_id,
                 "ha_public_url": app_settings.HA_PUBLIC_URL,
             }
@@ -116,6 +130,8 @@ async def get_settings(
         settings = Settings(
             id=1,
             telemetry_interval_seconds=60,
+            telemetry_retention_days=30,
+            telemetry_retention_enabled=False,
             door_entity_id="input_boolean.puerta_laboratorio_simulada",
             updated_at=datetime.now(timezone.utc)
         )
@@ -125,12 +141,31 @@ async def get_settings(
         
         return {
             "telemetry_interval_seconds": settings.telemetry_interval_seconds,
+            "telemetry_retention_days": settings.telemetry_retention_days,
+            "telemetry_retention_enabled": settings.telemetry_retention_enabled,
             "door_entity_id": settings.door_entity_id,
             "ha_public_url": app_settings.HA_PUBLIC_URL,
         }
     except Exception as e:
         logger.error(f"Error getting settings: {e}")
         raise HTTPException(status_code=500, detail=f"Error al obtener configuración: {str(e)}")
+
+
+@router.get("/retention/preview", response_model=RetentionPreviewResponse)
+async def preview_retention_cleanup(
+    days: int = Query(..., ge=1, le=3650),
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles("admin")),
+):
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    result = await db.execute(
+        select(func.count(TelemetryRecord.id)).where(TelemetryRecord.recorded_at < cutoff)
+    )
+    return {
+        "retention_days": days,
+        "cutoff": cutoff,
+        "records_to_delete": result.scalar_one(),
+    }
 
 
 @router.patch("", response_model=SettingsResponse)
@@ -153,12 +188,32 @@ async def update_settings(
     """
     result = await db.execute(select(Settings).where(Settings.id == 1))
     settings = result.scalar_one_or_none()
+    current_retention_days = settings.telemetry_retention_days if settings else 30
+    retention_enabled = settings.telemetry_retention_enabled if settings else False
+    retention_changed = (
+        payload.telemetry_retention_days is not None
+        and (
+            payload.telemetry_retention_days != current_retention_days
+            or not retention_enabled
+        )
+    )
+
+    if retention_changed and not payload.confirm_retention_cleanup:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Debes confirmar la limpieza del historial. "
+                "Los registros anteriores al nuevo periodo se eliminaran permanentemente."
+            ),
+        )
     
     # Crear o actualizar configuración
     if not settings:
         settings = Settings(
             id=1,
             telemetry_interval_seconds=payload.telemetry_interval_seconds or 60,
+            telemetry_retention_days=payload.telemetry_retention_days or 30,
+            telemetry_retention_enabled=retention_changed,
             door_entity_id=payload.door_entity_id or "input_boolean.puerta_laboratorio_simulada",
             updated_at=datetime.now(timezone.utc)
         )
@@ -166,10 +221,27 @@ async def update_settings(
     else:
         if payload.telemetry_interval_seconds is not None:
             settings.telemetry_interval_seconds = payload.telemetry_interval_seconds
+        if payload.telemetry_retention_days is not None:
+            settings.telemetry_retention_days = payload.telemetry_retention_days
+            settings.telemetry_retention_enabled = True
         if payload.door_entity_id is not None:
             settings.door_entity_id = payload.door_entity_id
         settings.updated_at = datetime.now(timezone.utc)
     
+    deleted_records = 0
+    if retention_changed:
+        try:
+            deleted_records = await delete_expired_records(
+                db,
+                payload.telemetry_retention_days,
+            )
+        except Exception as exc:
+            await db.rollback()
+            raise HTTPException(
+                status_code=500,
+                detail=f"No se pudo completar la limpieza; no se guardo el cambio: {exc}",
+            ) from exc
+
     await db.commit()
     await db.refresh(settings)
 
@@ -189,8 +261,11 @@ async def update_settings(
 
     return {
         "telemetry_interval_seconds": settings.telemetry_interval_seconds,
+        "telemetry_retention_days": settings.telemetry_retention_days,
+        "telemetry_retention_enabled": settings.telemetry_retention_enabled,
         "door_entity_id": settings.door_entity_id,
         "ha_public_url": app_settings.HA_PUBLIC_URL,
+        "deleted_records": deleted_records,
     }
 
 

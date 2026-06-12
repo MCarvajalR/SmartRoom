@@ -11,7 +11,7 @@ Configuraciones disponibles:
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -32,6 +32,8 @@ class Settings(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     telemetry_interval_seconds: Mapped[int] = mapped_column(Integer, default=60, nullable=False)
+    telemetry_retention_days: Mapped[int] = mapped_column(Integer, default=30, nullable=False)
+    telemetry_retention_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     door_entity_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

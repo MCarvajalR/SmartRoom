@@ -34,7 +34,19 @@
     padding: var(--space-2) var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
+    background: var(--color-bg);
+    color: var(--color-text);
     font-size: var(--text-base);
+    outline: none;
+
+    &::placeholder {
+      color: var(--color-text-faint);
+    }
+
+    &:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-primary-highlight);
+    }
   }
 
   span {
@@ -55,11 +67,55 @@
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 }
 
+.btn-secondary, .btn-danger {
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.btn-secondary {
+  background: var(--color-surface-offset);
+  color: var(--color-text);
+}
+
+.btn-danger {
+  border-color: var(--color-error);
+  background: var(--color-error);
+  color: #fff;
+}
+
+.retention-warning {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-error);
+  border-radius: var(--radius-md);
+  background: var(--color-error-highlight);
+  color: var(--color-text);
+
+  strong { display: block; color: var(--color-error); }
+  p { margin-top: var(--space-2); font-size: var(--text-sm); }
+}
+
+.confirmation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
 .success-msg {
   color: var(--color-success);
   font-size: var(--text-sm);
   margin-top: var(--space-3);
 }
+
+.error-msg { color: var(--color-error); }
+.validation-msg { margin-top: var(--space-2); font-size: var(--text-sm); }
 
 .current-value {
   color: var(--color-text-muted);
@@ -103,5 +159,14 @@
     color: var(--color-text-muted);
     font-weight: 600;
     background: var(--color-surface-offset);
+  }
+}
+
+@media (max-width: 600px) {
+  .interval-input {
+    align-items: stretch;
+    flex-direction: column;
+
+    input { width: 100%; }
   }
 }
