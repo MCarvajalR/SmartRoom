@@ -84,6 +84,14 @@ import { User, UserCreate, UserRole, UserUpdate } from '../../../core/models/use
 
       <div class="table-wrap">
         <table class="data-table">
+          <colgroup>
+            <col class="column-user" />
+            <col class="column-email" />
+            <col class="column-role" />
+            <col class="column-status" />
+            <col class="column-created" />
+            <col class="column-actions" />
+          </colgroup>
           <thead>
             <tr>
               <th>Usuario</th>
