@@ -104,6 +104,7 @@ async def lifespan(app: FastAPI):
     logger.info("Índices operativos verificados/creados.")
 
     # 2. Crear usuario admin por defecto si no existe
+    telemetry_interval_seconds = settings.TELEMETRY_INTERVAL_SECONDS
     async with AsyncSessionLocal() as db:
         suggested_area_names = {}
         try:
@@ -146,11 +147,24 @@ async def lifespan(app: FastAPI):
         simulator = await ensure_energy_simulator(db)
         logger.info("Simulador energético verificado: %s", simulator.entity_id)
 
+        settings_result = await db.execute(select(Settings).where(Settings.id == 1))
+        system_settings = settings_result.scalar_one_or_none()
+        if system_settings:
+            telemetry_interval_seconds = system_settings.telemetry_interval_seconds
+        else:
+            db.add(
+                Settings(
+                    id=1,
+                    telemetry_interval_seconds=telemetry_interval_seconds,
+                )
+            )
+            await db.commit()
+
     # 3. Configurar scheduler con jobs periódicos
     scheduler.add_job(
         telemetry_service.collect_all,
         "interval",
-        seconds=settings.TELEMETRY_INTERVAL_SECONDS,
+        seconds=telemetry_interval_seconds,
         id="collect_telemetry",
         replace_existing=True,
     )
@@ -158,7 +172,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(
         run_device_sync,
         "interval",
-        seconds=settings.TELEMETRY_INTERVAL_SECONDS,
+        seconds=telemetry_interval_seconds,
         id="sync_devices_from_ha",
         replace_existing=True,
     )
@@ -167,7 +181,7 @@ async def lifespan(app: FastAPI):
     scheduler.start()
     logger.info(
         "Scheduler iniciado: telemetría y sync de dispositivos cada %ds.",
-        settings.TELEMETRY_INTERVAL_SECONDS,
+        telemetry_interval_seconds,
     )
 
     # 5. Sincronización inicial

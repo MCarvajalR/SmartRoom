@@ -26,10 +26,11 @@ interface SystemSettings {
           <div class="interval-input">
             <input type="number" [(ngModel)]="intervalValue" (ngModelChange)="onIntervalChange()" min="10" max="3600" />
             <span>segundos</span>
-            <button class="btn-primary" (click)="saveSettings()" [disabled]="saving || !hasChanged">
+            <button class="btn-primary" (click)="saveSettings()" [disabled]="saving || !hasChanged || !isIntervalValid">
               {{ saving ? 'Guardando...' : 'Guardar' }}
             </button>
           </div>
+          <p class="current-value">Valor activo: {{ currentInterval }} segundos</p>
           @if (saveMessage) {
             <p class="success-msg">{{ saveMessage }}</p>
           }
@@ -108,11 +109,17 @@ export class AdminSettingsComponent implements OnInit {
     this.hasChanged = this.intervalValue !== this.currentInterval;
   }
 
+  get isIntervalValid() {
+    return Number.isInteger(this.intervalValue) && this.intervalValue >= 10 && this.intervalValue <= 3600;
+  }
+
   onDoorChange() {
     this.hasDoorChanged = this.doorEntityId !== this.currentDoorEntityId;
   }
 
   saveSettings() {
+    if (this.hasChanged && !this.isIntervalValid) return;
+
     this.saving = true;
     this.saveMessage = '';
     this.cdr.detectChanges();
@@ -138,7 +145,7 @@ export class AdminSettingsComponent implements OnInit {
       },
       error: (err) => {
         console.error('Error guardando:', err);
-        this.saveMessage = 'Error al guardar';
+        this.saveMessage = err.error?.detail || 'Error al guardar';
         this.saving = false;
         this.cdr.detectChanges();
       }

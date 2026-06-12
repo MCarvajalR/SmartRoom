@@ -15,7 +15,7 @@ from typing import List
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -57,7 +57,7 @@ class SettingsUpdate(BaseModel):
         telemetry_interval_seconds: Nuevo intervalo de telemetría
         door_entity_id: Nueva entity ID de la puerta
     """
-    telemetry_interval_seconds: int | None = None
+    telemetry_interval_seconds: int | None = Field(default=None, ge=10, le=3600)
     door_entity_id: str | None = None
 
 
@@ -137,6 +137,7 @@ async def get_settings(
 async def update_settings(
     payload: SettingsUpdate,
     db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_roles("admin")),
 ):
     """
     Actualiza la configuración global del sistema.
@@ -176,18 +177,12 @@ async def update_settings(
     if payload.telemetry_interval_seconds is not None:
         try:
             if scheduler.running:
-                try:
-                    scheduler.remove_job("collect_telemetry")
-                except Exception:
-                    pass
-                from app.services import telemetry_service
-                scheduler.add_job(
-                    telemetry_service.collect_all,
-                    "interval",
-                    seconds=payload.telemetry_interval_seconds,
-                    id="collect_telemetry",
-                    replace_existing=True,
-                )
+                for job_id in ("collect_telemetry", "sync_devices_from_ha"):
+                    scheduler.reschedule_job(
+                        job_id,
+                        trigger="interval",
+                        seconds=payload.telemetry_interval_seconds,
+                    )
         except Exception as e:
             import logging
             logging.getLogger(__name__).warning(f"No se pudo actualizar el scheduler: {e}")
